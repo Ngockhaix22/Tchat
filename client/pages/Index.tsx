@@ -252,7 +252,7 @@ const removePhoneNumber = (index: number) => {
       const phoneNumber = selectedConversation.number;
 
       if (!phoneNumber || !phoneNumber.trim()) {
-        alert("Please enter a phone number");
+        showAlert("Missing Phone Number", "Please enter a phone number");
         return;
       }
 
