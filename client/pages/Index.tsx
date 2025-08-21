@@ -147,53 +147,115 @@ const removePhoneNumber = (index: number) => {
   const sendMessage = async () => {
     if (!selectedAccount || !selectedConversation || !message.trim()) return;
 
-    // Handle new message case
-    const phoneNumber = selectedConversation.id === "new"
-      ? newMessageNumber
-      : selectedConversation.number;
+    // Handle new message case with multiple numbers
+    if (selectedConversation.id === "new") {
+      // Get valid phone numbers (non-empty and properly formatted)
+      const validNumbers = phoneNumbers.filter(num => num.trim() && num.replace(/\D/g, "").length === 10);
 
-    if (!phoneNumber || !phoneNumber.trim()) {
-      alert("Please enter a phone number");
-      return;
-    }
+      if (validNumbers.length === 0) {
+        alert("Please enter at least one valid phone number");
+        return;
+      }
 
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/send-message`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountId: parseInt(selectedAccount.id),
-          phoneNumber: phoneNumber.replace(/\D/g, ""),
-          message,
-        }),
-      });
+      setLoading(true);
 
-      const data = await res.json();
+      try {
+        // Send message to all valid numbers
+        const sendPromises = validNumbers.map(async (phoneNumber) => {
+          const res = await fetch(`${API_BASE_URL}/api/send-message`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              accountId: parseInt(selectedAccount.id),
+              phoneNumber: phoneNumber.replace(/\D/g, ""),
+              message,
+            }),
+          });
+          return { phoneNumber, response: await res.json() };
+        });
 
-      if (data.success) {
-        // Update local conversation with new message
-        const newMessage: Message = {
-          id: data.messageRecord.id.toString(),
-          text: message,
-          fromMe: true,
-          timestamp: new Date(data.messageRecord.timestamp)
-        };
+        const results = await Promise.all(sendPromises);
 
-        if (selectedConversation.id === "new") {
-          // Create new conversation
-          const newConversation: Conversation = {
-            id: data.conversation.id,
-            number: data.conversation.number,
-            lastMessage: message,
-            messages: [newMessage],
-            lastActivity: new Date(),
-            unreadCount: 0
+        // Process results
+        const successful = results.filter(r => r.response.success);
+        const failed = results.filter(r => !r.response.success);
+
+        if (successful.length > 0) {
+          // Create conversations for successful sends
+          const newConversations = successful.map(result => {
+            const newMessage: Message = {
+              id: result.response.messageRecord.id.toString(),
+              text: message,
+              fromMe: true,
+              timestamp: new Date(result.response.messageRecord.timestamp)
+            };
+
+            return {
+              id: result.response.conversation.id,
+              number: result.response.conversation.number,
+              lastMessage: message,
+              messages: [newMessage],
+              lastActivity: new Date(),
+              unreadCount: 0
+            };
+          });
+
+          setConversations(prev => [...newConversations, ...prev]);
+
+          // Select the first successful conversation
+          if (newConversations.length > 0) {
+            setSelectedConversation(newConversations[0]);
+          }
+
+          setMessage("");
+          setPhoneNumbers([""]);
+          setCurrentNumberIndex(0);
+
+          // Show success message
+          const successMsg = `Message sent to ${successful.length} number${successful.length > 1 ? 's' : ''}`;
+          const failMsg = failed.length > 0 ? ` Failed to send to ${failed.length} number${failed.length > 1 ? 's' : ''}` : '';
+          alert(successMsg + failMsg);
+        } else {
+          alert("Failed to send message to any numbers");
+        }
+      } catch (err) {
+        console.error('Error sending messages:', err);
+        alert("Failed to send messages");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Original single conversation logic
+      const phoneNumber = selectedConversation.number;
+
+      if (!phoneNumber || !phoneNumber.trim()) {
+        alert("Please enter a phone number");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/send-message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountId: parseInt(selectedAccount.id),
+            phoneNumber: phoneNumber.replace(/\D/g, ""),
+            message,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          // Update local conversation with new message
+          const newMessage: Message = {
+            id: data.messageRecord.id.toString(),
+            text: message,
+            fromMe: true,
+            timestamp: new Date(data.messageRecord.timestamp)
           };
 
-          setConversations(prev => [newConversation, ...prev]);
-          setSelectedConversation(newConversation);
-        } else {
           // Update existing conversation
           setSelectedConversation(prev => prev ? {
             ...prev,
@@ -210,18 +272,17 @@ const removePhoneNumber = (index: number) => {
                 : conv
             )
           );
-        }
 
-        setMessage("");
-        setNewMessageNumber("");
-      } else {
-        alert(`Error: ${data.error}`);
+          setMessage("");
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (err) {
+        console.error('Error sending message:', err);
+        alert("Failed to send message");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Error sending message:', err);
-      alert("Failed to send message");
-    } finally {
-      setLoading(false);
     }
   };
 
