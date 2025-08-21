@@ -55,7 +55,7 @@ const TEXTFREE_ACCOUNTS = [
       "content-type": "application/json",
       "x-gid": "0",
       "x-rest-method": "POST",
-      "authorization": 'OAuth realm="https://api.pinger.com",oauth_consumer_key="2175909957-3879335701%3Btextfree-voice-iphone-free-5D63A131-F5C1-4B10-A28D-5A2A5DFF3390",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1755741394",oauth_nonce="56C8ACC5-1CFD-4974-905D-656DE09D4FBF",oauth_signature="3fYwLnu3dhYj7d1Eu3ZPjcgB9Z8%3D"',
+      "authorization": 'OAuth realm="https://api.pinger.com",oauth_consumer_key="2175909957-3879335701%3Btextfree-voice-iphone-free-5D63A131-F5C1-4B10-A28D-5A2A5DFF3390",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1755758058",oauth_nonce="D97D71C8-5342-4341-8A08-B1CF1121AF4C", oauth_signature="fLspkC3xW6zt6zuEmeIR3BoNNmk%3D"',
       "accept": "*/*",
       "x-os": "ios,16.7.11",
       "x-udid": "7CDDF743-7383-4B53-9DA5-8601C0A5C4CB,92ADE5A3-D162-456C-B9D0-703887529370",
