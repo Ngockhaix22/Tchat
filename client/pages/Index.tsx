@@ -53,6 +53,11 @@ const MultiAccountTextFree = () => {
   const [phoneNumbers, setPhoneNumbers] = useState<string[]>([""]);
   const [currentNumberIndex, setCurrentNumberIndex] = useState(0);
 
+  // Alert modal state
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+
   // Format phone number as user types
   const formatPhoneNumber = (value: string): string => {
   // Remove all non-digits
