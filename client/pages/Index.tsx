@@ -234,11 +234,11 @@ const removePhoneNumber = (index: number) => {
             showToast(successMsg + failMsg, 'warning');
           }
         } else {
-          showAlert("Send Failed", "Failed to send message to any numbers");
+          showToast("Failed to send message to any numbers", 'error');
         }
       } catch (err) {
         console.error('Error sending messages:', err);
-        showAlert("Error", "Failed to send messages");
+        showToast("Failed to send messages", 'error');
       } finally {
         setLoading(false);
       }
