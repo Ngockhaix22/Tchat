@@ -227,8 +227,12 @@ const removePhoneNumber = (index: number) => {
 
           // Show success message
           const successMsg = `Message sent to ${successful.length} number${successful.length > 1 ? 's' : ''}`;
-          const failMsg = failed.length > 0 ? ` Failed to send to ${failed.length} number${failed.length > 1 ? 's' : ''}` : '';
-          showAlert("Message Status", successMsg + failMsg);
+          if (failed.length === 0) {
+            showToast(successMsg, 'success');
+          } else {
+            const failMsg = ` Failed to send to ${failed.length} number${failed.length > 1 ? 's' : ''}`;
+            showToast(successMsg + failMsg, 'warning');
+          }
         } else {
           showAlert("Send Failed", "Failed to send message to any numbers");
         }
