@@ -298,11 +298,11 @@ const removePhoneNumber = (index: number) => {
 
           setMessage("");
         } else {
-          alert(`Error: ${data.error}`);
+          showAlert("Send Error", `Error: ${data.error}`);
         }
       } catch (err) {
         console.error('Error sending message:', err);
-        alert("Failed to send message");
+        showAlert("Error", "Failed to send message");
       } finally {
         setLoading(false);
       }
