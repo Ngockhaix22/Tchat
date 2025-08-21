@@ -475,7 +475,20 @@ const removePhoneNumber = (index: number) => {
         <div className="p-6 border-b border-slate-100">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Conversations</h2>
-            <div className="">
+            <div className="flex gap-2">
+              <Button
+                onClick={() => selectedAccount && fetchConversations(selectedAccount.id)}
+                variant="ghost"
+                size="sm"
+                className="text-slate-500 hover:text-slate-700"
+                disabled={loadingConvos}
+              >
+                {loadingConvos ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+              </Button>
               <Button
                 onClick={() => {
                   setSelectedConversation({
