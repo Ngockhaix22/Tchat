@@ -190,15 +190,20 @@ const removePhoneNumber = (index: number) => {
 
     // Find the communications sync response (first one with messages)
     const communicationsResponse = apiResponse.find(response =>
-      response.body && JSON.parse(response.body).result?.newCommunications
+      response.body && (typeof response.body === 'object' ? response.body.result?.newCommunications : JSON.parse(response.body).result?.newCommunications)
     );
 
     if (!communicationsResponse) {
+      console.log('No communications response found in:', apiResponse);
       return [];
     }
 
-    const parsedBody = JSON.parse(communicationsResponse.body);
-    const messages = parsedBody.result.newCommunications || [];
+    // Handle both parsed and unparsed body formats
+    const parsedBody = typeof communicationsResponse.body === 'object'
+      ? communicationsResponse.body
+      : JSON.parse(communicationsResponse.body);
+
+    const messages = parsedBody.result?.newCommunications || [];
 
     messages.forEach((msg: any) => {
       if (msg.type !== 'message') return;
