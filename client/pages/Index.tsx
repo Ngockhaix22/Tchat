@@ -148,7 +148,20 @@ const removePhoneNumber = (index: number) => {
       console.log('Response status:', res.status);
 
       if (!res.ok) {
-        const errorText = await res.text();
+        // Clone the response to read it multiple times if needed
+        const responseClone = res.clone();
+        let errorText = '';
+        try {
+          const errorData = await res.json();
+          errorText = errorData.error || errorData.message || 'Unknown error';
+        } catch {
+          // If JSON parsing fails, try reading as text
+          try {
+            errorText = await responseClone.text();
+          } catch {
+            errorText = `HTTP ${res.status} error`;
+          }
+        }
         console.error('API response error:', res.status, errorText);
         showToast(`API Error: ${res.status} - ${errorText}`, 'error');
         return;
@@ -173,7 +186,9 @@ const removePhoneNumber = (index: number) => {
       // More detailed error messages
       let errorMessage = 'Error loading conversations';
       if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        errorMessage = 'Cannot connect to server - is the API server running on port 3001?';
+        errorMessage = 'Cannot connect to server - is the API server running?';
+      } else if (err.message.includes('body stream already read')) {
+        errorMessage = 'Response parsing error - please try again';
       } else if (err.message) {
         errorMessage = `Error: ${err.message}`;
       }
