@@ -41,6 +41,8 @@ const MultiAccountTextFree = () => {
   const [loadingConvos, setLoadingConvos] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [newMessageNumber, setNewMessageNumber] = useState("");
+  const [phoneNumbers, setPhoneNumbers] = useState<string[]>([""]);
+  const [currentNumberIndex, setCurrentNumberIndex] = useState(0);
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string): string => {
