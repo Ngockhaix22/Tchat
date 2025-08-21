@@ -243,7 +243,7 @@ const removePhoneNumber = (index: number) => {
         }
       } catch (err) {
         console.error('Error sending messages:', err);
-        alert("Failed to send messages");
+        showAlert("Error", "Failed to send messages");
       } finally {
         setLoading(false);
       }
