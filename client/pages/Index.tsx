@@ -167,7 +167,7 @@ const removePhoneNumber = (index: number) => {
       const validNumbers = phoneNumbers.filter(num => num.trim() && num.replace(/\D/g, "").length === 10);
 
       if (validNumbers.length === 0) {
-        showAlert("Invalid Phone Numbers", "Please enter at least one valid phone number");
+        showToast("Please enter at least one valid phone number", 'warning');
         return;
       }
 
