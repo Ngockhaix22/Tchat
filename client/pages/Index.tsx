@@ -79,6 +79,13 @@ const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   setNewMessageNumber(formatted);
 };
 
+// Custom alert function
+const showAlert = (title: string, message: string) => {
+  setAlertTitle(title);
+  setAlertMessage(message);
+  setAlertOpen(true);
+};
+
 // Multi-number handling functions
 const handleMultiNumberChange = (index: number, value: string) => {
   const formatted = formatPhoneNumber(value);
