@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Send, Phone, User, Plus, Loader2, MessageCircle, Settings, Search, X } from "lucide-react";
+import {
+  Send,
+  Phone,
+  User,
+  Plus,
+  Loader2,
+  MessageCircle,
+  Settings,
+  Search,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,7 +46,8 @@ const MultiAccountTextFree = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [selectedConversation, setSelectedConversation] =
+    useState<Conversation | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingConvos, setLoadingConvos] = useState(false);
@@ -47,69 +58,85 @@ const MultiAccountTextFree = () => {
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string): string => {
-  // Remove all non-digits
-  const digits = value.replace(/\D/g, '');
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, "");
 
-  // Remove leading '1' if present (assuming it's a country code for US numbers)
-  const cleanDigits = digits.startsWith('1') && digits.length > 10 ? digits.slice(1) : digits;
+    // Remove leading '1' if present (assuming it's a country code for US numbers)
+    const cleanDigits =
+      digits.startsWith("1") && digits.length > 10 ? digits.slice(1) : digits;
 
-  // Format as (XXX) XXX-XXXX if 10 digits, otherwise return raw digits
-  if (cleanDigits.length === 10) {
-    return `(${cleanDigits.slice(0, 3)}) ${cleanDigits.slice(3, 6)}-${cleanDigits.slice(6, 10)}`;
-  } else {
-    return cleanDigits; // Return unformatted if not exactly 10 digits
-  }
-};
+    // Format as (XXX) XXX-XXXX if 10 digits, otherwise return raw digits
+    if (cleanDigits.length === 10) {
+      return `(${cleanDigits.slice(0, 3)}) ${cleanDigits.slice(3, 6)}-${cleanDigits.slice(6, 10)}`;
+    } else {
+      return cleanDigits; // Return unformatted if not exactly 10 digits
+    }
+  };
 
-const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const formatted = formatPhoneNumber(e.target.value);
-  setNewMessageNumber(formatted);
-};
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setNewMessageNumber(formatted);
+  };
 
-// Custom toast function with 2 second auto-hide
-const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
-  if (type === 'success') {
-    toast.success(message, { duration: 2000 });
-  } else if (type === 'warning') {
-    toast.warning(message, { duration: 2000 });
-  } else {
-    toast.error(message, { duration: 2000 });
-  }
-};
+  // Custom toast function with 2 second auto-hide
+  const showToast = (
+    message: string,
+    type: "success" | "error" | "warning" = "error",
+  ) => {
+    if (type === "success") {
+      toast.success(message, { duration: 2000 });
+    } else if (type === "warning") {
+      toast.warning(message, { duration: 2000 });
+    } else {
+      toast.error(message, { duration: 2000 });
+    }
+  };
 
-// Multi-number handling functions
-const handleMultiNumberChange = (index: number, value: string) => {
-  const formatted = formatPhoneNumber(value);
-  const newNumbers = [...phoneNumbers];
-  newNumbers[index] = formatted;
-  setPhoneNumbers(newNumbers);
-};
-
-const handleMultiNumberKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
-  if (e.key === 'Enter' && phoneNumbers[index].trim() && phoneNumbers.length < 10) {
-    e.preventDefault();
-    const newNumbers = [...phoneNumbers, ""];
+  // Multi-number handling functions
+  const handleMultiNumberChange = (index: number, value: string) => {
+    const formatted = formatPhoneNumber(value);
+    const newNumbers = [...phoneNumbers];
+    newNumbers[index] = formatted;
     setPhoneNumbers(newNumbers);
-    setCurrentNumberIndex(index + 1);
-    // Focus next input after a small delay
-    setTimeout(() => {
-      const nextInput = document.querySelector(`input[data-number-index="${index + 1}"]`) as HTMLInputElement;
-      nextInput?.focus();
-    }, 50);
-  }
-};
+  };
 
-const removePhoneNumber = (index: number) => {
-  const newNumbers = phoneNumbers.filter((_, i) => i !== index);
-  // Always keep at least one empty slot for new input
-  if (newNumbers.length === 0 || (newNumbers.length > 0 && newNumbers[newNumbers.length - 1].trim())) {
-    newNumbers.push("");
-  }
-  setPhoneNumbers(newNumbers);
-  if (currentNumberIndex >= newNumbers.length) {
-    setCurrentNumberIndex(newNumbers.length - 1);
-  }
-};
+  const handleMultiNumberKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number,
+  ) => {
+    if (
+      e.key === "Enter" &&
+      phoneNumbers[index].trim() &&
+      phoneNumbers.length < 10
+    ) {
+      e.preventDefault();
+      const newNumbers = [...phoneNumbers, ""];
+      setPhoneNumbers(newNumbers);
+      setCurrentNumberIndex(index + 1);
+      // Focus next input after a small delay
+      setTimeout(() => {
+        const nextInput = document.querySelector(
+          `input[data-number-index="${index + 1}"]`,
+        ) as HTMLInputElement;
+        nextInput?.focus();
+      }, 50);
+    }
+  };
+
+  const removePhoneNumber = (index: number) => {
+    const newNumbers = phoneNumbers.filter((_, i) => i !== index);
+    // Always keep at least one empty slot for new input
+    if (
+      newNumbers.length === 0 ||
+      (newNumbers.length > 0 && newNumbers[newNumbers.length - 1].trim())
+    ) {
+      newNumbers.push("");
+    }
+    setPhoneNumbers(newNumbers);
+    if (currentNumberIndex >= newNumbers.length) {
+      setCurrentNumberIndex(newNumbers.length - 1);
+    }
+  };
 
   // Load accounts
   useEffect(() => {
@@ -123,7 +150,7 @@ const removePhoneNumber = (index: number) => {
       setAccounts(data);
       if (data.length > 0) setSelectedAccount(data[0]);
     } catch (err) {
-      console.error('Error fetching accounts:', err);
+      console.error("Error fetching accounts:", err);
     }
   };
 
@@ -137,23 +164,25 @@ const removePhoneNumber = (index: number) => {
   const fetchConversations = async (accountId: string) => {
     setLoadingConvos(true);
     try {
-      console.log(`Fetching conversations for account ${accountId} from ${API_BASE_URL}/api/getConvertion`);
+      console.log(
+        `Fetching conversations for account ${accountId} from ${API_BASE_URL}/api/getConvertion`,
+      );
 
       const res = await fetch(`${API_BASE_URL}/api/getConvertion`, {
-        method: 'POST',
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountId: parseInt(accountId) })
+        body: JSON.stringify({ accountId: parseInt(accountId) }),
       });
 
-      console.log('Response status:', res.status);
+      console.log("Response status:", res.status);
 
       if (!res.ok) {
         // Clone the response to read it multiple times if needed
         const responseClone = res.clone();
-        let errorText = '';
+        let errorText = "";
         try {
           const errorData = await res.json();
-          errorText = errorData.error || errorData.message || 'Unknown error';
+          errorText = errorData.error || errorData.message || "Unknown error";
         } catch {
           // If JSON parsing fails, try reading as text
           try {
@@ -162,38 +191,47 @@ const removePhoneNumber = (index: number) => {
             errorText = `HTTP ${res.status} error`;
           }
         }
-        console.error('API response error:', res.status, errorText);
-        showToast(`API Error: ${res.status} - ${errorText}`, 'error');
+        console.error("API response error:", res.status, errorText);
+        showToast(`API Error: ${res.status} - ${errorText}`, "error");
         return;
       }
 
       const data = await res.json();
-      console.log('API response data:', data);
+      console.log("API response data:", data);
 
       if (data.success && data.data) {
         // Parse the nested JSON in the response
         const processedConversations = processTextFreeMessages(data.data);
-        console.log('Processed conversations:', processedConversations);
+        console.log("Processed conversations:", processedConversations);
         setConversations(processedConversations);
-        showToast(`Loaded ${processedConversations.length} conversations`, 'success');
+        showToast(
+          `Loaded ${processedConversations.length} conversations`,
+          "success",
+        );
       } else {
-        console.error('Failed to fetch conversations:', data.error || 'Unknown error');
-        showToast(`Failed to load conversations: ${data.error || 'Unknown error'}`, 'error');
+        console.error(
+          "Failed to fetch conversations:",
+          data.error || "Unknown error",
+        );
+        showToast(
+          `Failed to load conversations: ${data.error || "Unknown error"}`,
+          "error",
+        );
       }
     } catch (err: any) {
-      console.error('Error fetching conversations:', err);
+      console.error("Error fetching conversations:", err);
 
       // More detailed error messages
-      let errorMessage = 'Error loading conversations';
-      if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        errorMessage = 'Cannot connect to server - is the API server running?';
-      } else if (err.message.includes('body stream already read')) {
-        errorMessage = 'Response parsing error - please try again';
+      let errorMessage = "Error loading conversations";
+      if (err.name === "TypeError" && err.message.includes("fetch")) {
+        errorMessage = "Cannot connect to server - is the API server running?";
+      } else if (err.message.includes("body stream already read")) {
+        errorMessage = "Response parsing error - please try again";
       } else if (err.message) {
         errorMessage = `Error: ${err.message}`;
       }
 
-      showToast(errorMessage, 'error');
+      showToast(errorMessage, "error");
     } finally {
       setLoadingConvos(false);
     }
@@ -204,30 +242,35 @@ const removePhoneNumber = (index: number) => {
     const conversationsMap = new Map<string, Conversation>();
 
     // Find the communications sync response (first one with messages)
-    const communicationsResponse = apiResponse.find(response =>
-      response.body && (typeof response.body === 'object' ? response.body.result?.newCommunications : JSON.parse(response.body).result?.newCommunications)
+    const communicationsResponse = apiResponse.find(
+      (response) =>
+        response.body &&
+        (typeof response.body === "object"
+          ? response.body.result?.newCommunications
+          : JSON.parse(response.body).result?.newCommunications),
     );
 
     if (!communicationsResponse) {
-      console.log('No communications response found in:', apiResponse);
+      console.log("No communications response found in:", apiResponse);
       return [];
     }
 
     // Handle both parsed and unparsed body formats
-    const parsedBody = typeof communicationsResponse.body === 'object'
-      ? communicationsResponse.body
-      : JSON.parse(communicationsResponse.body);
+    const parsedBody =
+      typeof communicationsResponse.body === "object"
+        ? communicationsResponse.body
+        : JSON.parse(communicationsResponse.body);
 
     const messages = parsedBody.result?.newCommunications || [];
 
     messages.forEach((msg: any) => {
-      if (msg.type !== 'message') return;
+      if (msg.type !== "message") return;
 
       // Determine the other party's number
-      let otherPartyNumber = '';
-      let displayName = '';
+      let otherPartyNumber = "";
+      let displayName = "";
 
-      if (msg.direction === 'out') {
+      if (msg.direction === "out") {
         // Outgoing message - get recipient
         const recipient = msg.to[0];
         otherPartyNumber = recipient.TN;
@@ -246,10 +289,10 @@ const removePhoneNumber = (index: number) => {
         conversationsMap.set(conversationKey, {
           id: `conv_${otherPartyNumber}`,
           number: displayName,
-          lastMessage: '',
+          lastMessage: "",
           messages: [],
           lastActivity: new Date(),
-          unreadCount: 0
+          unreadCount: 0,
         });
       }
 
@@ -259,8 +302,8 @@ const removePhoneNumber = (index: number) => {
       const transformedMessage: Message = {
         id: msg.id,
         text: msg.text,
-        fromMe: msg.direction === 'out',
-        timestamp: new Date(msg.timeCreated)
+        fromMe: msg.direction === "out",
+        timestamp: new Date(msg.timeCreated),
       };
 
       conversation.messages.push(transformedMessage);
@@ -269,24 +312,29 @@ const removePhoneNumber = (index: number) => {
     });
 
     // Sort messages within each conversation by timestamp
-    conversationsMap.forEach(conversation => {
-      conversation.messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    conversationsMap.forEach((conversation) => {
+      conversation.messages.sort(
+        (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+      );
       // Update last activity to the most recent message
       if (conversation.messages.length > 0) {
-        const lastMessage = conversation.messages[conversation.messages.length - 1];
+        const lastMessage =
+          conversation.messages[conversation.messages.length - 1];
         conversation.lastActivity = lastMessage.timestamp;
       }
     });
 
     // Convert to array and sort by last activity (most recent first)
     const conversationsArray = Array.from(conversationsMap.values());
-    return conversationsArray.sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
+    return conversationsArray.sort(
+      (a, b) => b.lastActivity.getTime() - a.lastActivity.getTime(),
+    );
   };
 
   // Format phone number for display
   const formatPhoneForDisplay = (phoneNumber: string): string => {
     // Remove country code if present (1 prefix)
-    const cleaned = phoneNumber.replace(/^\+?1?/, '');
+    const cleaned = phoneNumber.replace(/^\+?1?/, "");
     if (cleaned.length === 10) {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
@@ -299,10 +347,12 @@ const removePhoneNumber = (index: number) => {
     // Handle new message case with multiple numbers
     if (selectedConversation.id === "new") {
       // Get valid phone numbers (non-empty and properly formatted)
-      const validNumbers = phoneNumbers.filter(num => num.trim() && num.replace(/\D/g, "").length === 10);
+      const validNumbers = phoneNumbers.filter(
+        (num) => num.trim() && num.replace(/\D/g, "").length === 10,
+      );
 
       if (validNumbers.length === 0) {
-        showToast("Please enter at least one valid phone number", 'warning');
+        showToast("Please enter at least one valid phone number", "warning");
         return;
       }
 
@@ -326,17 +376,17 @@ const removePhoneNumber = (index: number) => {
         const results = await Promise.all(sendPromises);
 
         // Process results
-        const successful = results.filter(r => r.response.success);
-        const failed = results.filter(r => !r.response.success);
+        const successful = results.filter((r) => r.response.success);
+        const failed = results.filter((r) => !r.response.success);
 
         if (successful.length > 0) {
           // Create conversations for successful sends
-          const newConversations = successful.map(result => {
+          const newConversations = successful.map((result) => {
             const newMessage: Message = {
               id: result.response.messageRecord.id.toString(),
               text: message,
               fromMe: true,
-              timestamp: new Date(result.response.messageRecord.timestamp)
+              timestamp: new Date(result.response.messageRecord.timestamp),
             };
 
             return {
@@ -345,11 +395,11 @@ const removePhoneNumber = (index: number) => {
               lastMessage: message,
               messages: [newMessage],
               lastActivity: new Date(),
-              unreadCount: 0
+              unreadCount: 0,
             };
           });
 
-          setConversations(prev => [...newConversations, ...prev]);
+          setConversations((prev) => [...newConversations, ...prev]);
 
           // Select the first successful conversation
           if (newConversations.length > 0) {
@@ -361,19 +411,19 @@ const removePhoneNumber = (index: number) => {
           setCurrentNumberIndex(0);
 
           // Show success message
-          const successMsg = `Message sent to ${successful.length} number${successful.length > 1 ? 's' : ''}`;
+          const successMsg = `Message sent to ${successful.length} number${successful.length > 1 ? "s" : ""}`;
           if (failed.length === 0) {
-            showToast(successMsg, 'success');
+            showToast(successMsg, "success");
           } else {
-            const failMsg = ` Failed to send to ${failed.length} number${failed.length > 1 ? 's' : ''}`;
-            showToast(successMsg + failMsg, 'warning');
+            const failMsg = ` Failed to send to ${failed.length} number${failed.length > 1 ? "s" : ""}`;
+            showToast(successMsg + failMsg, "warning");
           }
         } else {
-          showToast("Failed to send message to any numbers", 'error');
+          showToast("Failed to send message to any numbers", "error");
         }
       } catch (err) {
-        console.error('Error sending messages:', err);
-        showToast("Failed to send messages", 'error');
+        console.error("Error sending messages:", err);
+        showToast("Failed to send messages", "error");
       } finally {
         setLoading(false);
       }
@@ -382,7 +432,7 @@ const removePhoneNumber = (index: number) => {
       const phoneNumber = selectedConversation.number;
 
       if (!phoneNumber || !phoneNumber.trim()) {
-        showToast("Please enter a phone number", 'warning');
+        showToast("Please enter a phone number", "warning");
         return;
       }
 
@@ -406,33 +456,37 @@ const removePhoneNumber = (index: number) => {
             id: data.messageRecord.id.toString(),
             text: message,
             fromMe: true,
-            timestamp: new Date(data.messageRecord.timestamp)
+            timestamp: new Date(data.messageRecord.timestamp),
           };
 
           // Update existing conversation
-          setSelectedConversation(prev => prev ? {
-            ...prev,
-            messages: [...prev.messages, newMessage],
-            lastMessage: message,
-            lastActivity: new Date()
-          } : null);
+          setSelectedConversation((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  messages: [...prev.messages, newMessage],
+                  lastMessage: message,
+                  lastActivity: new Date(),
+                }
+              : null,
+          );
 
           // Update conversations list
-          setConversations(prev =>
-            prev.map(conv =>
+          setConversations((prev) =>
+            prev.map((conv) =>
               conv.id === selectedConversation.id
                 ? { ...conv, lastMessage: message, lastActivity: new Date() }
-                : conv
-            )
+                : conv,
+            ),
           );
 
           setMessage("");
         } else {
-          showToast(`Error: ${data.error}`, 'error');
+          showToast(`Error: ${data.error}`, "error");
         }
       } catch (err) {
-        console.error('Error sending message:', err);
-        showToast("Failed to send message", 'error');
+        console.error("Error sending message:", err);
+        showToast("Failed to send message", "error");
       } finally {
         setLoading(false);
       }
@@ -449,8 +503,8 @@ const removePhoneNumber = (index: number) => {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.number.includes(searchQuery)
+  const filteredConversations = conversations.filter((conv) =>
+    conv.number.includes(searchQuery),
   );
 
   return (
@@ -483,7 +537,7 @@ const removePhoneNumber = (index: number) => {
                   "w-full text-left p-4 rounded-xl transition-all duration-200 group",
                   selectedAccount?.id === acc.id
                     ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg"
-                    : "hover:bg-slate-50 text-slate-700"
+                    : "hover:bg-slate-50 text-slate-700",
                 )}
               >
                 <div className="flex items-center justify-between">
@@ -493,10 +547,12 @@ const removePhoneNumber = (index: number) => {
                       <span className="font-medium">{acc.number}</span>
                     </div>
                   </div>
-                  <div className={cn(
-                    "w-3 h-3 rounded-full",
-                    acc.isActive ? "bg-green-400" : "bg-slate-300"
-                  )} />
+                  <div
+                    className={cn(
+                      "w-3 h-3 rounded-full",
+                      acc.isActive ? "bg-green-400" : "bg-slate-300",
+                    )}
+                  />
                 </div>
               </button>
             ))}
@@ -518,10 +574,14 @@ const removePhoneNumber = (index: number) => {
       <div className="w-96 bg-white border-r border-slate-200 flex flex-col">
         <div className="p-6 border-b border-slate-100">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Conversations</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+              Conversations
+            </h2>
             <div className="flex gap-2">
               <Button
-                onClick={() => selectedAccount && fetchConversations(selectedAccount.id)}
+                onClick={() =>
+                  selectedAccount && fetchConversations(selectedAccount.id)
+                }
                 variant="ghost"
                 size="sm"
                 className="text-slate-500 hover:text-slate-700"
@@ -540,7 +600,7 @@ const removePhoneNumber = (index: number) => {
                     number: "",
                     lastMessage: "",
                     messages: [],
-                    lastActivity: new Date()
+                    lastActivity: new Date(),
                   });
                   setPhoneNumbers([""]);
                   setCurrentNumberIndex(0);
@@ -550,7 +610,6 @@ const removePhoneNumber = (index: number) => {
                 <Plus className="w-2 h-2" />
               </Button>
             </div>
-
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -578,7 +637,7 @@ const removePhoneNumber = (index: number) => {
                     "w-full text-left p-4 rounded-lg transition-all duration-200 border mb-2",
                     selectedConversation?.id === conv.id
                       ? "bg-blue-50 border-blue-200"
-                      : "hover:bg-slate-50 border-transparent"
+                      : "hover:bg-slate-50 border-transparent",
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -595,7 +654,10 @@ const removePhoneNumber = (index: number) => {
                         </h3>
                         <div className="flex items-center gap-2">
                           {conv.unreadCount! > 0 && (
-                            <Badge variant="default" className="bg-blue-500 text-xs px-2 py-0.5">
+                            <Badge
+                              variant="default"
+                              className="bg-blue-500 text-xs px-2 py-0.5"
+                            >
                               {conv.unreadCount}
                             </Badge>
                           )}
@@ -617,7 +679,6 @@ const removePhoneNumber = (index: number) => {
         </ScrollArea>
 
         {/* Floating New Message Button */}
-
       </div>
 
       {/* Right - Chat Window */}
@@ -636,31 +697,46 @@ const removePhoneNumber = (index: number) => {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold text-slate-900">New Message</h3>
-                      <p className="text-sm text-slate-500">Enter a phone number to start messaging</p>
+                      <h3 className="font-semibold text-slate-900">
+                        New Message
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Enter a phone number to start messaging
+                      </p>
                     </div>
                   </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-slate-700">Phone Numbers (Max 10)</label>
-                      <span className="text-xs text-slate-500">{phoneNumbers.filter(n => n.trim()).length}/10</span>
+                      <label className="text-sm font-medium text-slate-700">
+                        Phone Numbers (Max 10)
+                      </label>
+                      <span className="text-xs text-slate-500">
+                        {phoneNumbers.filter((n) => n.trim()).length}/10
+                      </span>
                     </div>
 
                     {/* Combined chips and input in same row */}
                     <div className="flex items-center gap-2 min-h-[40px] p-3 border border-slate-200 rounded-lg bg-slate-50 flex-wrap">
                       {/* Phone number chips */}
-                      {phoneNumbers.filter(n => n.trim()).map((number, index) => (
-                        <div key={index} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm">
-                          <span className="font-mono">{number}</span>
-                          <button
-                            onClick={() => removePhoneNumber(phoneNumbers.indexOf(number))}
-                            className="text-blue-600 hover:text-red-500 ml-1"
+                      {phoneNumbers
+                        .filter((n) => n.trim())
+                        .map((number, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm"
                           >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
+                            <span className="font-mono">{number}</span>
+                            <button
+                              onClick={() =>
+                                removePhoneNumber(phoneNumbers.indexOf(number))
+                              }
+                              className="text-blue-600 hover:text-red-500 ml-1"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
 
                       {/* Input field inline with chips */}
                       {phoneNumbers.length < 10 && (
@@ -668,37 +744,58 @@ const removePhoneNumber = (index: number) => {
                           <Input
                             data-number-index={phoneNumbers.length - 1}
                             value={phoneNumbers[phoneNumbers.length - 1] || ""}
-                            onChange={(e) => handleMultiNumberChange(phoneNumbers.length - 1, e.target.value)}
+                            onChange={(e) =>
+                              handleMultiNumberChange(
+                                phoneNumbers.length - 1,
+                                e.target.value,
+                              )
+                            }
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter' && phoneNumbers[phoneNumbers.length - 1]?.trim() && phoneNumbers.length < 10) {
+                              if (
+                                e.key === "Enter" &&
+                                phoneNumbers[phoneNumbers.length - 1]?.trim() &&
+                                phoneNumbers.length < 10
+                              ) {
                                 e.preventDefault();
                                 const newNumbers = [...phoneNumbers, ""];
                                 setPhoneNumbers(newNumbers);
                                 setTimeout(() => {
-                                  const nextInput = document.querySelector(`input[data-number-index="${newNumbers.length - 1}"]`) as HTMLInputElement;
+                                  const nextInput = document.querySelector(
+                                    `input[data-number-index="${newNumbers.length - 1}"]`,
+                                  ) as HTMLInputElement;
                                   nextInput?.focus();
                                 }, 50);
                               }
                             }}
-                            placeholder={phoneNumbers.filter(n => n.trim()).length === 0 ? "Enter phone number and press Enter" : "Add another..."}
+                            placeholder={
+                              phoneNumbers.filter((n) => n.trim()).length === 0
+                                ? "Enter phone number and press Enter"
+                                : "Add another..."
+                            }
                             className="text-sm font-mono border-0 bg-transparent shadow-none focus-visible:ring-0 px-2"
                             maxLength={14}
                           />
                           <Button
                             onClick={() => {
-                              const currentNumber = phoneNumbers[phoneNumbers.length - 1]?.trim();
+                              const currentNumber =
+                                phoneNumbers[phoneNumbers.length - 1]?.trim();
                               if (currentNumber && phoneNumbers.length < 10) {
                                 const newNumbers = [...phoneNumbers, ""];
                                 setPhoneNumbers(newNumbers);
                                 setTimeout(() => {
-                                  const nextInput = document.querySelector(`input[data-number-index="${newNumbers.length - 1}"]`) as HTMLInputElement;
+                                  const nextInput = document.querySelector(
+                                    `input[data-number-index="${newNumbers.length - 1}"]`,
+                                  ) as HTMLInputElement;
                                   nextInput?.focus();
                                 }, 50);
                               }
                             }}
                             variant="ghost"
                             size="sm"
-                            disabled={!phoneNumbers[phoneNumbers.length - 1]?.trim() || phoneNumbers.length >= 10}
+                            disabled={
+                              !phoneNumbers[phoneNumbers.length - 1]?.trim() ||
+                              phoneNumbers.length >= 10
+                            }
                             className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600"
                           >
                             <Plus className="w-3 h-3" />
@@ -707,9 +804,12 @@ const removePhoneNumber = (index: number) => {
                       )}
 
                       {/* Show message when no numbers and at limit */}
-                      {phoneNumbers.filter(n => n.trim()).length === 0 && phoneNumbers.length >= 10 && (
-                        <span className="text-slate-400 text-sm">Maximum 10 numbers reached</span>
-                      )}
+                      {phoneNumbers.filter((n) => n.trim()).length === 0 &&
+                        phoneNumbers.length >= 10 && (
+                          <span className="text-slate-400 text-sm">
+                            Maximum 10 numbers reached
+                          </span>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -723,8 +823,12 @@ const removePhoneNumber = (index: number) => {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold text-slate-900">{selectedConversation.number}</h3>
-                      <p className="text-sm text-slate-500">Active conversation</p>
+                      <h3 className="font-semibold text-slate-900">
+                        {selectedConversation.number}
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Active conversation
+                      </p>
                     </div>
                   </div>
 
@@ -743,7 +847,7 @@ const removePhoneNumber = (index: number) => {
                     key={msg.id}
                     className={cn(
                       "flex",
-                      msg.fromMe ? "justify-end" : "justify-start"
+                      msg.fromMe ? "justify-end" : "justify-start",
                     )}
                   >
                     <div
@@ -751,15 +855,20 @@ const removePhoneNumber = (index: number) => {
                         "max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm",
                         msg.fromMe
                           ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white"
-                          : "bg-white text-slate-900 border border-slate-200"
+                          : "bg-white text-slate-900 border border-slate-200",
                       )}
                     >
                       <p className="text-sm">{msg.text}</p>
-                      <p className={cn(
-                        "text-xs mt-1",
-                        msg.fromMe ? "text-blue-100" : "text-slate-500"
-                      )}>
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <p
+                        className={cn(
+                          "text-xs mt-1",
+                          msg.fromMe ? "text-blue-100" : "text-slate-500",
+                        )}
+                      >
+                        {msg.timestamp.toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </p>
                     </div>
                   </div>
@@ -769,7 +878,8 @@ const removePhoneNumber = (index: number) => {
 
             {/* Message Input */}
             <div className="bg-white border-t border-slate-200 p-6">
-              {selectedConversation.id === "new" && phoneNumbers.filter(n => n.trim()).length === 0 ? (
+              {selectedConversation.id === "new" &&
+              phoneNumbers.filter((n) => n.trim()).length === 0 ? (
                 // Disabled state for new messages without phone numbers
                 <div className="flex items-center gap-3 opacity-50">
                   <Input
@@ -790,16 +900,22 @@ const removePhoneNumber = (index: number) => {
                   <Input
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder={selectedConversation.id === "new"
-                      ? `Send message to ${phoneNumbers.filter(n => n.trim()).length} number${phoneNumbers.filter(n => n.trim()).length > 1 ? 's' : ''}...`
-                      : "Type a message..."
+                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                    placeholder={
+                      selectedConversation.id === "new"
+                        ? `Send message to ${phoneNumbers.filter((n) => n.trim()).length} number${phoneNumbers.filter((n) => n.trim()).length > 1 ? "s" : ""}...`
+                        : "Type a message..."
                     }
                     className="flex-1 bg-slate-50 border-0 rounded-full px-4 py-3"
                   />
                   <Button
                     onClick={sendMessage}
-                    disabled={loading || !message.trim() || (selectedConversation.id === "new" && phoneNumbers.filter(n => n.trim()).length === 0)}
+                    disabled={
+                      loading ||
+                      !message.trim() ||
+                      (selectedConversation.id === "new" &&
+                        phoneNumbers.filter((n) => n.trim()).length === 0)
+                    }
                     className="rounded-full w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                   >
                     {loading ? (
@@ -831,7 +947,7 @@ const removePhoneNumber = (index: number) => {
                     number: "",
                     lastMessage: "",
                     messages: [],
-                    lastActivity: new Date()
+                    lastActivity: new Date(),
                   });
                   setPhoneNumbers([""]);
                   setCurrentNumberIndex(0);
