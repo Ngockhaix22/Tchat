@@ -481,52 +481,66 @@ const removePhoneNumber = (index: number) => {
                       <span className="text-xs text-slate-500">{phoneNumbers.filter(n => n.trim()).length}/10</span>
                     </div>
 
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {phoneNumbers.map((number, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <div className="flex-1">
-                            <Input
-                              data-number-index={index}
-                              value={number}
-                              onChange={(e) => handleMultiNumberChange(index, e.target.value)}
-                              onKeyDown={(e) => handleMultiNumberKeyDown(e, index)}
-                              placeholder={`Phone number ${index + 1} - Press Enter to add next`}
-                              className="text-sm font-mono"
-                              maxLength={14}
-                            />
-                          </div>
-                          {phoneNumbers.length > 1 && (
-                            <Button
-                              onClick={() => removePhoneNumber(index)}
-                              variant="ghost"
-                              size="sm"
-                              className="text-slate-400 hover:text-red-500 px-2"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          )}
+                    {/* Phone number chips display */}
+                    <div className="flex flex-wrap gap-2 min-h-[40px] p-3 border border-slate-200 rounded-lg bg-slate-50">
+                      {phoneNumbers.filter(n => n.trim()).map((number, index) => (
+                        <div key={index} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm">
+                          <span className="font-mono">{number}</span>
+                          <button
+                            onClick={() => removePhoneNumber(phoneNumbers.indexOf(number))}
+                            className="text-blue-600 hover:text-red-500 ml-1"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                         </div>
                       ))}
+
+                      {phoneNumbers.filter(n => n.trim()).length === 0 && (
+                        <span className="text-slate-400 text-sm">No numbers added yet</span>
+                      )}
                     </div>
 
+                    {/* Single input for adding new numbers */}
                     {phoneNumbers.length < 10 && (
-                      <Button
-                        onClick={() => {
-                          const newNumbers = [...phoneNumbers, ""];
-                          setPhoneNumbers(newNumbers);
-                          setCurrentNumberIndex(newNumbers.length - 1);
-                          setTimeout(() => {
-                            const nextInput = document.querySelector(`input[data-number-index="${newNumbers.length - 1}"]`) as HTMLInputElement;
-                            nextInput?.focus();
-                          }, 50);
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="w-full border-dashed"
-                      >
-                        <Plus className="w-3 h-3 mr-2" />
-                        Add Another Number
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          data-number-index={phoneNumbers.length - 1}
+                          value={phoneNumbers[phoneNumbers.length - 1] || ""}
+                          onChange={(e) => handleMultiNumberChange(phoneNumbers.length - 1, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && phoneNumbers[phoneNumbers.length - 1]?.trim() && phoneNumbers.length < 10) {
+                              e.preventDefault();
+                              const newNumbers = [...phoneNumbers, ""];
+                              setPhoneNumbers(newNumbers);
+                              setTimeout(() => {
+                                const nextInput = document.querySelector(`input[data-number-index="${newNumbers.length - 1}"]`) as HTMLInputElement;
+                                nextInput?.focus();
+                              }, 50);
+                            }
+                          }}
+                          placeholder="Enter phone number and press Enter"
+                          className="text-sm font-mono"
+                          maxLength={14}
+                        />
+                        <Button
+                          onClick={() => {
+                            const currentNumber = phoneNumbers[phoneNumbers.length - 1]?.trim();
+                            if (currentNumber && phoneNumbers.length < 10) {
+                              const newNumbers = [...phoneNumbers, ""];
+                              setPhoneNumbers(newNumbers);
+                              setTimeout(() => {
+                                const nextInput = document.querySelector(`input[data-number-index="${newNumbers.length - 1}"]`) as HTMLInputElement;
+                                nextInput?.focus();
+                              }, 50);
+                            }
+                          }}
+                          variant="outline"
+                          size="sm"
+                          disabled={!phoneNumbers[phoneNumbers.length - 1]?.trim() || phoneNumbers.length >= 10}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
