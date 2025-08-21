@@ -137,24 +137,48 @@ const removePhoneNumber = (index: number) => {
   const fetchConversations = async (accountId: string) => {
     setLoadingConvos(true);
     try {
+      console.log(`Fetching conversations for account ${accountId} from ${API_BASE_URL}/api/getConvertion`);
+
       const res = await fetch(`${API_BASE_URL}/api/getConvertion`, {
         method: 'POST',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ accountId: parseInt(accountId) })
       });
+
+      console.log('Response status:', res.status);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('API response error:', res.status, errorText);
+        showToast(`API Error: ${res.status} - ${errorText}`, 'error');
+        return;
+      }
+
       const data = await res.json();
+      console.log('API response data:', data);
 
       if (data.success && data.data) {
         // Parse the nested JSON in the response
         const processedConversations = processTextFreeMessages(data.data);
+        console.log('Processed conversations:', processedConversations);
         setConversations(processedConversations);
+        showToast(`Loaded ${processedConversations.length} conversations`, 'success');
       } else {
-        console.error('Failed to fetch conversations:', data.error);
-        showToast('Failed to load conversations', 'error');
+        console.error('Failed to fetch conversations:', data.error || 'Unknown error');
+        showToast(`Failed to load conversations: ${data.error || 'Unknown error'}`, 'error');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching conversations:', err);
-      showToast('Error loading conversations', 'error');
+
+      // More detailed error messages
+      let errorMessage = 'Error loading conversations';
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        errorMessage = 'Cannot connect to server - is the API server running on port 3001?';
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`;
+      }
+
+      showToast(errorMessage, 'error');
     } finally {
       setLoadingConvos(false);
     }
