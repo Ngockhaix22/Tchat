@@ -66,11 +66,15 @@ const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   setNewMessageNumber(formatted);
 };
 
-// Custom alert function
-const showAlert = (title: string, message: string) => {
-  setAlertTitle(title);
-  setAlertMessage(message);
-  setAlertOpen(true);
+// Custom toast function with 2 second auto-hide
+const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
+  if (type === 'success') {
+    toast.success(message, { duration: 2000 });
+  } else if (type === 'warning') {
+    toast.warning(message, { duration: 2000 });
+  } else {
+    toast.error(message, { duration: 2000 });
+  }
 };
 
 // Multi-number handling functions
