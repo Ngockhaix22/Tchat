@@ -65,6 +65,38 @@ const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   setNewMessageNumber(formatted);
 };
 
+// Multi-number handling functions
+const handleMultiNumberChange = (index: number, value: string) => {
+  const formatted = formatPhoneNumber(value);
+  const newNumbers = [...phoneNumbers];
+  newNumbers[index] = formatted;
+  setPhoneNumbers(newNumbers);
+};
+
+const handleMultiNumberKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+  if (e.key === 'Enter' && phoneNumbers[index].trim() && phoneNumbers.length < 10) {
+    e.preventDefault();
+    const newNumbers = [...phoneNumbers, ""];
+    setPhoneNumbers(newNumbers);
+    setCurrentNumberIndex(index + 1);
+    // Focus next input after a small delay
+    setTimeout(() => {
+      const nextInput = document.querySelector(`input[data-number-index="${index + 1}"]`) as HTMLInputElement;
+      nextInput?.focus();
+    }, 50);
+  }
+};
+
+const removePhoneNumber = (index: number) => {
+  if (phoneNumbers.length > 1) {
+    const newNumbers = phoneNumbers.filter((_, i) => i !== index);
+    setPhoneNumbers(newNumbers);
+    if (currentNumberIndex >= newNumbers.length) {
+      setCurrentNumberIndex(newNumbers.length - 1);
+    }
+  }
+};
+
   // Load accounts
   useEffect(() => {
     fetchAccounts();
