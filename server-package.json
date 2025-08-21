@@ -1,0 +1,18 @@
+{
+  "name": "textfree-server",
+  "version": "1.0.0",
+  "description": "TextFree Multi-Account API Server",
+  "main": "textfree-server.js",
+  "scripts": {
+    "start": "node textfree-server.js",
+    "dev": "nodemon textfree-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}
