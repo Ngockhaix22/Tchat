@@ -293,11 +293,11 @@ const removePhoneNumber = (index: number) => {
 
           setMessage("");
         } else {
-          showAlert("Send Error", `Error: ${data.error}`);
+          showToast(`Error: ${data.error}`, 'error');
         }
       } catch (err) {
         console.error('Error sending message:', err);
-        showAlert("Error", "Failed to send message");
+        showToast("Failed to send message", 'error');
       } finally {
         setLoading(false);
       }
