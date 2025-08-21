@@ -247,7 +247,7 @@ const removePhoneNumber = (index: number) => {
       const phoneNumber = selectedConversation.number;
 
       if (!phoneNumber || !phoneNumber.trim()) {
-        showAlert("Missing Phone Number", "Please enter a phone number");
+        showToast("Please enter a phone number", 'warning');
         return;
       }
 
