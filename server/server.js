@@ -57,7 +57,7 @@ const TEXTFREE_ACCOUNTS = [
       "x-rest-method": "POST",
       "authorization": 'OAuth realm="https://api.pinger.com",oauth_consumer_key="2175909957-3879335701%3Btextfree-voice-iphone-free-5D63A131-F5C1-4B10-A28D-5A2A5DFF3390",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1755741394",oauth_nonce="56C8ACC5-1CFD-4974-905D-656DE09D4FBF",oauth_signature="3fYwLnu3dhYj7d1Eu3ZPjcgB9Z8%3D"',
       "accept": "*/*",
-      "x-os": "ios,16.7.11",
+      "x-os": "ios,18.7.6",
       "x-udid": "7CDDF743-7383-4B53-9DA5-8601C0A5C4CB,92ADE5A3-D162-456C-B9D0-703887529370",
       "x-install-id": "f6bdcaae0d6488e87abff136159172f8",
       "accept-language": "en-US,en;q=0.9",
@@ -279,6 +279,114 @@ app.post('/api/send-message', async (req, res) => {
       details: errorDetails,
       needsCredentialUpdate: error.response?.status === 401,
       proxyError: error.code === 'ECONNRESET' || error.message.includes('proxy')
+    });
+  }
+});
+app.post('/api/getConvertion', async (req, res) => {
+  
+  try {
+    
+    const authenticationOfHeader = {"authorization": 'OAuth realm="https://api.pinger.com",oauth_consumer_key="2175909957-3879335701%3Btextfree-voice-iphone-free-5D63A131-F5C1-4B10-A28D-5A2A5DFF3390",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1755758058",oauth_nonce="D97D71C8-5342-4341-8A08-B1CF1121AF4C", oauth_signature="fLspkC3xW6zt6zuEmeIR3BoNNmk%3D"'};
+    const { accountId } = req.body;
+    if (!accountId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Account ID is required'
+      });
+    }
+
+    // Find the account configuration
+    const account = TEXTFREE_ACCOUNTS.find(acc => acc.id === parseInt(accountId));
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: 'Account not found'
+      });
+    }
+    const authHeader = account.headers.authorization;
+    const timestampMatch = authHeader.match(/oauth_timestamp="([^"]+)"/);
+    const oauthTimestamp = timestampMatch ? timestampMatch[1] : null;
+
+    if (!oauthTimestamp) {
+      return res.status(400).json({
+        success: false,
+        error: 'oauth_timestamp not found in account authorization header'
+      });
+    }
+
+    // Get current timestamp for updatedSince
+    const currentTimestamp = Math.floor(Date.now() / 1000).toString();
+    // Check if account is properly configured
+    if (!account.headers.authorization || account.headers.authorization.includes('YOUR_KEY_HERE')) {
+      return res.status(400).json({
+        success: false,
+        error: `Account ${account.number} is not properly configured. Please add the curl headers.`
+      });
+    }
+    const newHeader = {
+      ...account.headers,
+      authorization: authenticationOfHeader.authorization
+    }
+    const proxyUrl = getRandomProxy();
+    const agents = createProxyAgent(proxyUrl);
+    const payload = {
+      requests: [
+        {
+          method: "GET",
+          contentType: "application/json",
+          useHTTPS: "1",
+          body: "",
+          queryParams: [
+            { createdSince: "2025-08-20 03:42:24.472958" },
+            { updatedSince: "2025-08-21 03:42:24.472958" }
+          ],
+          resource: "/2.0/communications/sync"
+        },
+        {
+          method: "GET",
+          contentType: "application/json",
+          resource: "/2.0/my/inbox",
+          queryParams: [],
+          body: "",
+          useHTTPS: "1"
+        },
+        {
+          useHTTPS: "1",
+          body: "",
+          contentType: "application/json",
+          method: "GET",
+          resource: "/2.0/bsms",
+          queryParams: [
+            { since: "2025-08-20 03:42:24.472958" }
+          ]
+        }
+      ]
+    };
+    // Prepare axios config
+    const axiosConfig = {
+      headers: newHeader,
+      timeout: 15000,
+    };
+    
+    // Add proxy agents if available
+    if (agents) {
+      axiosConfig.httpsAgent = agents.httpsAgent;
+      axiosConfig.httpAgent = agents.httpAgent;
+    }
+    const apiUrl = "https://api.pinger.com/1.0/batch";
+    const response = await axios.post(apiUrl, payload, axiosConfig);
+    res.json({
+      success: true,
+      data: response.data.result[0].body,
+      proxy: proxyUrl
+    });
+    } catch (error) {
+    console.error("Error sending batch request:", error.response?.data || error.message);
+
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: error.response?.data || null
     });
   }
 });
