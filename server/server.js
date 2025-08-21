@@ -283,6 +283,113 @@ app.post('/api/send-message', async (req, res) => {
   }
 });
 
+// Get messages using batch API
+app.post('/api/batch-request', async (req, res) => {
+  try {
+    const { accountId } = req.body;
+
+    if (!accountId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Account ID is required'
+      });
+    }
+
+    // Find the account configuration
+    const account = TEXTFREE_ACCOUNTS.find(acc => acc.id === parseInt(accountId));
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: 'Account not found'
+      });
+    }
+
+    // Check if account is properly configured
+    if (!account.headers.authorization || account.headers.authorization.includes('YOUR_KEY_HERE')) {
+      return res.status(400).json({
+        success: false,
+        error: `Account ${account.number} is not properly configured. Please add the curl headers.`
+      });
+    }
+
+    // Extract oauth_timestamp from the authorization header
+    const authHeader = account.headers.authorization;
+    const timestampMatch = authHeader.match(/oauth_timestamp="([^"]+)"/);
+    const oauthTimestamp = timestampMatch ? timestampMatch[1] : null;
+
+    if (!oauthTimestamp) {
+      return res.status(400).json({
+        success: false,
+        error: 'oauth_timestamp not found in account authorization header'
+      });
+    }
+
+    // Get current timestamp for updatedSince
+    const currentTimestamp = Math.floor(Date.now() / 1000).toString();
+
+    const proxyUrl = getRandomProxy();
+    const agents = createProxyAgent(proxyUrl);
+
+    // Prepare the payload with corrected timestamps
+    const payload = {
+      queryParams: [
+        { createdSince: oauthTimestamp },
+        { updatedSince: currentTimestamp }
+      ]
+    };
+
+    console.log(`Sending batch request for account ${account.number}:`, payload);
+    console.log(`Using oauth_timestamp: ${oauthTimestamp}, current timestamp: ${currentTimestamp}`);
+
+    // Prepare axios config
+    const axiosConfig = {
+      headers: account.headers,
+      timeout: 15000,
+    };
+
+    // Add proxy agents if available
+    if (agents) {
+      axiosConfig.httpsAgent = agents.httpsAgent;
+      axiosConfig.httpAgent = agents.httpAgent;
+    }
+
+    const apiUrl = "https://api.pinger.com/1.0/batch";
+    const response = await axios.post(apiUrl, payload, axiosConfig);
+
+    console.log('TextFree batch API response:', response.status, response.data);
+
+    res.json({
+      success: true,
+      data: response.data,
+      proxy: proxyUrl,
+      timestamps: {
+        createdSince: oauthTimestamp,
+        updatedSince: currentTimestamp
+      }
+    });
+
+  } catch (error) {
+    console.error("Error sending batch request:", error.response?.data || error.message);
+
+    let errorMessage = 'Failed to send batch request';
+    let errorDetails = error.message;
+
+    if (error.response?.status === 401 || error.message.includes('credentials')) {
+      errorMessage = 'Bad credentials - OAuth tokens may be expired. Please update your TextFree authentication.';
+    } else if (error.code === 'ECONNRESET' || error.message.includes('proxy')) {
+      errorMessage = 'Proxy connection failed. Trying different proxy...';
+    }
+
+    res.status(500).json({
+      success: false,
+      error: errorMessage,
+      details: errorDetails,
+      needsCredentialUpdate: error.response?.status === 401,
+      proxyError: error.code === 'ECONNRESET' || error.message.includes('proxy')
+    });
+  }
+});
+
 // Add global error handlers to prevent crashes
 process.on('uncaughtException', (error) => {
   console.error('🚨 Uncaught Exception:', error.message);
