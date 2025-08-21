@@ -13,13 +13,13 @@ app.use(express.json());
 
 // Proxy configuration
 const PROXY_LIST = [
-   "apollo.p.shifter.io:11435",
-   "apollo.p.shifter.io:11436",
-   "apollo.p.shifter.io:11437",
-   "apollo.p.shifter.io:11438",
-   "apollo.p.shifter.io:11439",
-   "apollo.p.shifter.io:11440",
-   "apollo.p.shifter.io:11441"
+  "apollo.p.shifter.io:11435",
+  "apollo.p.shifter.io:11436",
+  "apollo.p.shifter.io:11437",
+  "apollo.p.shifter.io:11438",
+  "apollo.p.shifter.io:11439",
+  "apollo.p.shifter.io:11440",
+  "apollo.p.shifter.io:11441"
 ];
 
 const getRandomProxy = () => {
@@ -31,12 +31,12 @@ const getRandomProxy = () => {
 function createProxyAgent(proxyUrl) {
   try {
     console.log(`🌐 Using proxy: ${proxyUrl}`);
-    
+
     // For HTTPS requests (TextFree API uses HTTPS)
     const httpsAgent = new HttpsProxyAgent(`http://${proxyUrl}`);
     // For HTTP requests (fallback)
     const httpAgent = new HttpProxyAgent(`http://${proxyUrl}`);
-    
+
     return { httpsAgent, httpAgent };
   } catch (error) {
     console.error('❌ Error creating proxy agent:', error.message);
@@ -55,9 +55,9 @@ const TEXTFREE_ACCOUNTS = [
       "content-type": "application/json",
       "x-gid": "0",
       "x-rest-method": "POST",
-      "authorization": 'OAuth realm="https://api.pinger.com",oauth_consumer_key="2175909957-3879335701%3Btextfree-voice-iphone-free-5D63A131-F5C1-4B10-A28D-5A2A5DFF3390",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1755758058",oauth_nonce="D97D71C8-5342-4341-8A08-B1CF1121AF4C", oauth_signature="fLspkC3xW6zt6zuEmeIR3BoNNmk%3D"',
+      "authorization": 'OAuth realm="https://api.pinger.com",oauth_consumer_key="2175909957-3879335701%3Btextfree-voice-iphone-free-5D63A131-F5C1-4B10-A28D-5A2A5DFF3390",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1755741394",oauth_nonce="56C8ACC5-1CFD-4974-905D-656DE09D4FBF",oauth_signature="3fYwLnu3dhYj7d1Eu3ZPjcgB9Z8%3D"',
       "accept": "*/*",
-      "x-os": "ios,16.7.11",
+      "x-os": "ios,18.7.6",
       "x-udid": "7CDDF743-7383-4B53-9DA5-8601C0A5C4CB,92ADE5A3-D162-456C-B9D0-703887529370",
       "x-install-id": "f6bdcaae0d6488e87abff136159172f8",
       "accept-language": "en-US,en;q=0.9",
@@ -122,7 +122,7 @@ app.get('/api/test-proxy', async (req, res) => {
   try {
     const proxyUrl = getRandomProxy();
     const agents = createProxyAgent(proxyUrl);
-    
+
     if (!agents) {
       return res.status(500).json({
         success: false,
@@ -282,12 +282,12 @@ app.post('/api/send-message', async (req, res) => {
     });
   }
 });
+app.post('/api/getConvertion', async (req, res) => {
 
-// Get messages using batch API
-app.post('/api/batch-request', async (req, res) => {
   try {
-    const { accountId } = req.body;
 
+    const authenticationOfHeader = { "authorization": 'OAuth realm="https://api.pinger.com",oauth_consumer_key="2175909957-3879335701%3Btextfree-voice-iphone-free-5D63A131-F5C1-4B10-A28D-5A2A5DFF3390",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1755758058",oauth_nonce="D97D71C8-5342-4341-8A08-B1CF1121AF4C", oauth_signature="fLspkC3xW6zt6zuEmeIR3BoNNmk%3D"' };
+    const { accountId } = req.body;
     if (!accountId) {
       return res.status(400).json({
         success: false,
@@ -303,16 +303,6 @@ app.post('/api/batch-request', async (req, res) => {
         error: 'Account not found'
       });
     }
-
-    // Check if account is properly configured
-    if (!account.headers.authorization || account.headers.authorization.includes('YOUR_KEY_HERE')) {
-      return res.status(400).json({
-        success: false,
-        error: `Account ${account.number} is not properly configured. Please add the curl headers.`
-      });
-    }
-
-    // Extract oauth_timestamp from the authorization header
     const authHeader = account.headers.authorization;
     const timestampMatch = authHeader.match(/oauth_timestamp="([^"]+)"/);
     const oauthTimestamp = timestampMatch ? timestampMatch[1] : null;
@@ -326,24 +316,55 @@ app.post('/api/batch-request', async (req, res) => {
 
     // Get current timestamp for updatedSince
     const currentTimestamp = Math.floor(Date.now() / 1000).toString();
-
+    // Check if account is properly configured
+    if (!account.headers.authorization || account.headers.authorization.includes('YOUR_KEY_HERE')) {
+      return res.status(400).json({
+        success: false,
+        error: `Account ${account.number} is not properly configured. Please add the curl headers.`
+      });
+    }
+    const newHeader = {
+      ...account.headers,
+      authorization: authenticationOfHeader.authorization
+    }
     const proxyUrl = getRandomProxy();
     const agents = createProxyAgent(proxyUrl);
-
-    // Prepare the payload with corrected timestamps
     const payload = {
-      queryParams: [
-        { createdSince: oauthTimestamp },
-        { updatedSince: currentTimestamp }
+      requests: [
+        {
+          method: "GET",
+          contentType: "application/json",
+          useHTTPS: "1",
+          body: "",
+          queryParams: [
+            { createdSince: "2025-08-20 03:42:24.472958" },
+            { updatedSince: "2025-08-21 03:42:24.472958" }
+          ],
+          resource: "/2.0/communications/sync"
+        },
+        {
+          method: "GET",
+          contentType: "application/json",
+          resource: "/2.0/my/inbox",
+          queryParams: [],
+          body: "",
+          useHTTPS: "1"
+        },
+        {
+          useHTTPS: "1",
+          body: "",
+          contentType: "application/json",
+          method: "GET",
+          resource: "/2.0/bsms",
+          queryParams: [
+            { since: "2025-08-20 03:42:24.472958" }
+          ]
+        }
       ]
     };
-
-    console.log(`Sending batch request for account ${account.number}:`, payload);
-    console.log(`Using oauth_timestamp: ${oauthTimestamp}, current timestamp: ${currentTimestamp}`);
-
     // Prepare axios config
     const axiosConfig = {
-      headers: account.headers,
+      headers: newHeader,
       timeout: 15000,
     };
 
@@ -352,40 +373,21 @@ app.post('/api/batch-request', async (req, res) => {
       axiosConfig.httpsAgent = agents.httpsAgent;
       axiosConfig.httpAgent = agents.httpAgent;
     }
-
     const apiUrl = "https://api.pinger.com/1.0/batch";
     const response = await axios.post(apiUrl, payload, axiosConfig);
-
-    console.log('TextFree batch API response:', response.status, response.data);
-
+    console.log('TextFree API response:', response.status, response.data);
     res.json({
       success: true,
-      data: response.data,
-      proxy: proxyUrl,
-      timestamps: {
-        createdSince: oauthTimestamp,
-        updatedSince: currentTimestamp
-      }
+      data: response.result,
+      proxy: proxyUrl
     });
-
   } catch (error) {
     console.error("Error sending batch request:", error.response?.data || error.message);
 
-    let errorMessage = 'Failed to send batch request';
-    let errorDetails = error.message;
-
-    if (error.response?.status === 401 || error.message.includes('credentials')) {
-      errorMessage = 'Bad credentials - OAuth tokens may be expired. Please update your TextFree authentication.';
-    } else if (error.code === 'ECONNRESET' || error.message.includes('proxy')) {
-      errorMessage = 'Proxy connection failed. Trying different proxy...';
-    }
-
     res.status(500).json({
       success: false,
-      error: errorMessage,
-      details: errorDetails,
-      needsCredentialUpdate: error.response?.status === 401,
-      proxyError: error.code === 'ECONNRESET' || error.message.includes('proxy')
+      error: error.message,
+      details: error.response?.data || null
     });
   }
 });
