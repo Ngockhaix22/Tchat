@@ -239,7 +239,7 @@ const removePhoneNumber = (index: number) => {
           const failMsg = failed.length > 0 ? ` Failed to send to ${failed.length} number${failed.length > 1 ? 's' : ''}` : '';
           showAlert("Message Status", successMsg + failMsg);
         } else {
-          alert("Failed to send message to any numbers");
+          showAlert("Send Failed", "Failed to send message to any numbers");
         }
       } catch (err) {
         console.error('Error sending messages:', err);
