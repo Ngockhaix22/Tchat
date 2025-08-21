@@ -30,7 +30,7 @@ interface Conversation {
   lastActivity: Date;
 }
 
-const API_BASE_URL = "http://localhost:3001";
+const API_BASE_URL = ""; // Use relative paths since frontend and backend are on same port
 
 const MultiAccountTextFree = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
