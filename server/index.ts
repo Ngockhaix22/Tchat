@@ -173,9 +173,19 @@ export function createServer() {
 
       console.log('TextFree API response:', response.status);
 
+      // Parse the response data since it's returned as a string
+      let parsedData = response.data.result;
+      if (Array.isArray(parsedData) && parsedData.length > 0 && typeof parsedData[0].body === 'string') {
+        // Parse the JSON strings in the body field
+        parsedData = parsedData.map(item => ({
+          ...item,
+          body: typeof item.body === 'string' ? JSON.parse(item.body) : item.body
+        }));
+      }
+
       res.json({
         success: true,
-        data: response.data.result,
+        data: parsedData,
         proxy: proxyUrl
       });
 
