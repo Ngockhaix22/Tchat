@@ -88,12 +88,14 @@ const handleMultiNumberKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, inde
 };
 
 const removePhoneNumber = (index: number) => {
-  if (phoneNumbers.length > 1) {
-    const newNumbers = phoneNumbers.filter((_, i) => i !== index);
-    setPhoneNumbers(newNumbers);
-    if (currentNumberIndex >= newNumbers.length) {
-      setCurrentNumberIndex(newNumbers.length - 1);
-    }
+  const newNumbers = phoneNumbers.filter((_, i) => i !== index);
+  // Always keep at least one empty slot for new input
+  if (newNumbers.length === 0 || (newNumbers.length > 0 && newNumbers[newNumbers.length - 1].trim())) {
+    newNumbers.push("");
+  }
+  setPhoneNumbers(newNumbers);
+  if (currentNumberIndex >= newNumbers.length) {
+    setCurrentNumberIndex(newNumbers.length - 1);
   }
 };
 
