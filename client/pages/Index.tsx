@@ -368,15 +368,17 @@ const removePhoneNumber = (index: number) => {
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Conversations</h2>
             <div className="">
               <Button
-                onClick={() =>
+                onClick={() => {
                   setSelectedConversation({
                     id: "new",
                     number: "",
                     lastMessage: "",
                     messages: [],
                     lastActivity: new Date()
-                  })
-                }
+                  });
+                  setPhoneNumbers([""]);
+                  setCurrentNumberIndex(0);
+                }}
                 className="rounded-full w-2 h-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg"
               >
                 <Plus className="w-2 h-2" />
