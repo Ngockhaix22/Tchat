@@ -237,7 +237,7 @@ const removePhoneNumber = (index: number) => {
           // Show success message
           const successMsg = `Message sent to ${successful.length} number${successful.length > 1 ? 's' : ''}`;
           const failMsg = failed.length > 0 ? ` Failed to send to ${failed.length} number${failed.length > 1 ? 's' : ''}` : '';
-          alert(successMsg + failMsg);
+          showAlert("Message Status", successMsg + failMsg);
         } else {
           alert("Failed to send message to any numbers");
         }
