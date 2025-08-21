@@ -137,25 +137,116 @@ const removePhoneNumber = (index: number) => {
   const fetchConversations = async (accountId: string) => {
     setLoadingConvos(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/conversations/${accountId}`);
+      const res = await fetch(`${API_BASE_URL}/api/getConvertion`, {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId: parseInt(accountId) })
+      });
       const data = await res.json();
 
-      // Transform the data to match our interface
-      const transformedConversations = data.map((conv: any) => ({
-        ...conv,
-        lastActivity: new Date(conv.lastActivity),
-        messages: conv.messages?.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp)
-        })) || []
-      }));
-
-      setConversations(transformedConversations);
+      if (data.success && data.data) {
+        // Parse the nested JSON in the response
+        const processedConversations = processTextFreeMessages(data.data);
+        setConversations(processedConversations);
+      } else {
+        console.error('Failed to fetch conversations:', data.error);
+        showToast('Failed to load conversations', 'error');
+      }
     } catch (err) {
       console.error('Error fetching conversations:', err);
+      showToast('Error loading conversations', 'error');
     } finally {
       setLoadingConvos(false);
     }
+  };
+
+  // Process TextFree API response into conversations
+  const processTextFreeMessages = (apiResponse: any[]): Conversation[] => {
+    const conversationsMap = new Map<string, Conversation>();
+
+    // Find the communications sync response (first one with messages)
+    const communicationsResponse = apiResponse.find(response =>
+      response.body && JSON.parse(response.body).result?.newCommunications
+    );
+
+    if (!communicationsResponse) {
+      return [];
+    }
+
+    const parsedBody = JSON.parse(communicationsResponse.body);
+    const messages = parsedBody.result.newCommunications || [];
+
+    messages.forEach((msg: any) => {
+      if (msg.type !== 'message') return;
+
+      // Determine the other party's number
+      let otherPartyNumber = '';
+      let displayName = '';
+
+      if (msg.direction === 'out') {
+        // Outgoing message - get recipient
+        const recipient = msg.to[0];
+        otherPartyNumber = recipient.TN;
+        displayName = recipient.name || formatPhoneForDisplay(recipient.TN);
+      } else {
+        // Incoming message - get sender
+        otherPartyNumber = msg.from.TN;
+        displayName = formatPhoneForDisplay(msg.from.TN);
+      }
+
+      // Create conversation key
+      const conversationKey = otherPartyNumber;
+
+      // Get or create conversation
+      if (!conversationsMap.has(conversationKey)) {
+        conversationsMap.set(conversationKey, {
+          id: `conv_${otherPartyNumber}`,
+          number: displayName,
+          lastMessage: '',
+          messages: [],
+          lastActivity: new Date(),
+          unreadCount: 0
+        });
+      }
+
+      const conversation = conversationsMap.get(conversationKey)!;
+
+      // Add message to conversation
+      const transformedMessage: Message = {
+        id: msg.id,
+        text: msg.text,
+        fromMe: msg.direction === 'out',
+        timestamp: new Date(msg.timeCreated)
+      };
+
+      conversation.messages.push(transformedMessage);
+      conversation.lastMessage = msg.text;
+      conversation.lastActivity = new Date(msg.timeCreated);
+    });
+
+    // Sort messages within each conversation by timestamp
+    conversationsMap.forEach(conversation => {
+      conversation.messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      // Update last activity to the most recent message
+      if (conversation.messages.length > 0) {
+        const lastMessage = conversation.messages[conversation.messages.length - 1];
+        conversation.lastActivity = lastMessage.timestamp;
+      }
+    });
+
+    // Convert to array and sort by last activity (most recent first)
+    const conversationsArray = Array.from(conversationsMap.values());
+    return conversationsArray.sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
+  };
+
+  // Format phone number for display
+  const formatPhoneForDisplay = (phoneNumber: string): string => {
+    // Remove country code if present (1 prefix)
+    const cleaned = phoneNumber.replace(/^\+?1?/, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return phoneNumber;
   };
 
   const sendMessage = async () => {
