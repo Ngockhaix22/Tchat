@@ -13,13 +13,13 @@ app.use(express.json());
 
 // Proxy configuration
 const PROXY_LIST = [
-  "apollo.p.shifter.io:11435",
-  "apollo.p.shifter.io:11436",
-  "apollo.p.shifter.io:11437",
-  "apollo.p.shifter.io:11438",
-  "apollo.p.shifter.io:11439",
-  "apollo.p.shifter.io:11440",
-  "apollo.p.shifter.io:11441"
+   "apollo.p.shifter.io:11435",
+   "apollo.p.shifter.io:11436",
+   "apollo.p.shifter.io:11437",
+   "apollo.p.shifter.io:11438",
+   "apollo.p.shifter.io:11439",
+   "apollo.p.shifter.io:11440",
+   "apollo.p.shifter.io:11441"
 ];
 
 const getRandomProxy = () => {
@@ -31,12 +31,12 @@ const getRandomProxy = () => {
 function createProxyAgent(proxyUrl) {
   try {
     console.log(`🌐 Using proxy: ${proxyUrl}`);
-
+    
     // For HTTPS requests (TextFree API uses HTTPS)
     const httpsAgent = new HttpsProxyAgent(`http://${proxyUrl}`);
     // For HTTP requests (fallback)
     const httpAgent = new HttpProxyAgent(`http://${proxyUrl}`);
-
+    
     return { httpsAgent, httpAgent };
   } catch (error) {
     console.error('❌ Error creating proxy agent:', error.message);
@@ -122,7 +122,7 @@ app.get('/api/test-proxy', async (req, res) => {
   try {
     const proxyUrl = getRandomProxy();
     const agents = createProxyAgent(proxyUrl);
-
+    
     if (!agents) {
       return res.status(500).json({
         success: false,
@@ -283,10 +283,10 @@ app.post('/api/send-message', async (req, res) => {
   }
 });
 app.post('/api/getConvertion', async (req, res) => {
-
+  
   try {
-
-    const authenticationOfHeader = { "authorization": 'OAuth realm="https://api.pinger.com",oauth_consumer_key="2175909957-3879335701%3Btextfree-voice-iphone-free-5D63A131-F5C1-4B10-A28D-5A2A5DFF3390",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1755758058",oauth_nonce="D97D71C8-5342-4341-8A08-B1CF1121AF4C", oauth_signature="fLspkC3xW6zt6zuEmeIR3BoNNmk%3D"' };
+    
+    const authenticationOfHeader = {"authorization": 'OAuth realm="https://api.pinger.com",oauth_consumer_key="2175909957-3879335701%3Btextfree-voice-iphone-free-5D63A131-F5C1-4B10-A28D-5A2A5DFF3390",oauth_signature_method="HMAC-SHA1",oauth_timestamp="1755758058",oauth_nonce="D97D71C8-5342-4341-8A08-B1CF1121AF4C", oauth_signature="fLspkC3xW6zt6zuEmeIR3BoNNmk%3D"'};
     const { accountId } = req.body;
     if (!accountId) {
       return res.status(400).json({
@@ -367,7 +367,7 @@ app.post('/api/getConvertion', async (req, res) => {
       headers: newHeader,
       timeout: 15000,
     };
-
+    
     // Add proxy agents if available
     if (agents) {
       axiosConfig.httpsAgent = agents.httpsAgent;
@@ -375,13 +375,12 @@ app.post('/api/getConvertion', async (req, res) => {
     }
     const apiUrl = "https://api.pinger.com/1.0/batch";
     const response = await axios.post(apiUrl, payload, axiosConfig);
-    console.log('TextFree API response:', response.status, response.data);
     res.json({
       success: true,
-      data: response.result,
+      data: response.data.result[0].body,
       proxy: proxyUrl
     });
-  } catch (error) {
+    } catch (error) {
     console.error("Error sending batch request:", error.response?.data || error.message);
 
     res.status(500).json({
