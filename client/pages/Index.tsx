@@ -584,12 +584,12 @@ const removePhoneNumber = (index: number) => {
 
             {/* Message Input */}
             <div className="bg-white border-t border-slate-200 p-6">
-              {selectedConversation.id === "new" && !newMessageNumber.trim() ? (
-                // Disabled state for new messages without phone number
+              {selectedConversation.id === "new" && phoneNumbers.filter(n => n.trim()).length === 0 ? (
+                // Disabled state for new messages without phone numbers
                 <div className="flex items-center gap-3 opacity-50">
                   <Input
                     disabled
-                    placeholder="Enter a phone number above first..."
+                    placeholder="Enter phone numbers above first..."
                     className="flex-1 bg-slate-50 border-0 rounded-full px-4 py-3"
                   />
                   <Button
@@ -607,14 +607,14 @@ const removePhoneNumber = (index: number) => {
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                     placeholder={selectedConversation.id === "new"
-                      ? `Send message to ${newMessageNumber}...`
+                      ? `Send message to ${phoneNumbers.filter(n => n.trim()).length} number${phoneNumbers.filter(n => n.trim()).length > 1 ? 's' : ''}...`
                       : "Type a message..."
                     }
                     className="flex-1 bg-slate-50 border-0 rounded-full px-4 py-3"
                   />
                   <Button
                     onClick={sendMessage}
-                    disabled={loading || !message.trim() || (selectedConversation.id === "new" && !newMessageNumber.trim())}
+                    disabled={loading || !message.trim() || (selectedConversation.id === "new" && phoneNumbers.filter(n => n.trim()).length === 0)}
                     className="rounded-full w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                   >
                     {loading ? (
