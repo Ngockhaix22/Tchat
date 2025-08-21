@@ -473,32 +473,59 @@ const removePhoneNumber = (index: number) => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <label className="text-sm font-medium text-slate-700 mb-2 block">Phone Number</label>
-                      <Input
-                        value={newMessageNumber}
-                        onChange={handlePhoneNumberChange}
-                        placeholder="(555) 123-4567"
-                        className="text-lg font-mono"
-                        maxLength={14}
-                      />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-slate-700">Phone Numbers (Max 10)</label>
+                      <span className="text-xs text-slate-500">{phoneNumbers.filter(n => n.trim()).length}/10</span>
                     </div>
-                    <Button
-                      onClick={() => {
-                        if (newMessageNumber.trim()) {
-                          // Auto-focus message input after number is entered
-                          const messageInput = document.querySelector('input[placeholder="Type a message..."]') as HTMLInputElement;
-                          messageInput?.focus();
-                        }
-                      }}
-                      disabled={!newMessageNumber.trim()}
-                      variant="outline"
-                      size="sm"
-                      className="mt-7"
-                    >
-                      Start Chat
-                    </Button>
+
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {phoneNumbers.map((number, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <Input
+                              data-number-index={index}
+                              value={number}
+                              onChange={(e) => handleMultiNumberChange(index, e.target.value)}
+                              onKeyDown={(e) => handleMultiNumberKeyDown(e, index)}
+                              placeholder={`Phone number ${index + 1} - Press Enter to add next`}
+                              className="text-sm font-mono"
+                              maxLength={14}
+                            />
+                          </div>
+                          {phoneNumbers.length > 1 && (
+                            <Button
+                              onClick={() => removePhoneNumber(index)}
+                              variant="ghost"
+                              size="sm"
+                              className="text-slate-400 hover:text-red-500 px-2"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {phoneNumbers.length < 10 && (
+                      <Button
+                        onClick={() => {
+                          const newNumbers = [...phoneNumbers, ""];
+                          setPhoneNumbers(newNumbers);
+                          setCurrentNumberIndex(newNumbers.length - 1);
+                          setTimeout(() => {
+                            const nextInput = document.querySelector(`input[data-number-index="${newNumbers.length - 1}"]`) as HTMLInputElement;
+                            nextInput?.focus();
+                          }, 50);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-dashed"
+                      >
+                        <Plus className="w-3 h-3 mr-2" />
+                        Add Another Number
+                      </Button>
+                    )}
                   </div>
                 </div>
               ) : (
