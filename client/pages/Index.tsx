@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useRef } from "react";
 import {
   Send,
   Phone,
@@ -22,6 +23,8 @@ interface Account {
   id: string;
   number: string;
   isActive?: boolean;
+  unreadCount?: number;
+  lastActivity?: Date;
 }
 
 interface Message {
@@ -40,14 +43,13 @@ interface Conversation {
   lastActivity: Date;
 }
 
-const API_BASE_URL = "http://localhost:3001"; 
+const API_BASE_URL = 'http://localhost:3001'; 
 
 const MultiAccountTextFree = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] =
-    useState<Conversation | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingConvos, setLoadingConvos] = useState(false);
@@ -55,6 +57,51 @@ const MultiAccountTextFree = () => {
   const [newMessageNumber, setNewMessageNumber] = useState("");
   const [phoneNumbers, setPhoneNumbers] = useState<string[]>([""]);
   const [currentNumberIndex, setCurrentNumberIndex] = useState(0);
+  const [lastMessageCounts, setLastMessageCounts] = useState<Record<string, number>>({});
+  const [isPolling, setIsPolling] = useState(false);
+  const [lastPollingTime, setLastPollingTime] = useState<Date | null>(null);
+  
+  // Enhanced storage for per-account data
+  const [accountConversations, setAccountConversations] = useState<Record<string, Conversation[]>>({});
+  const [accountLastSync, setAccountLastSync] = useState<Record<string, Date>>({});
+
+  // Add ref for chat container auto-scroll
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Improved scroll to bottom function
+  const scrollToBottom = (force = false) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: force ? 'auto' : 'smooth',
+        block: 'end'
+      });
+    }
+  };
+
+  // Alternative scroll method using the container ref - ENHANCED
+  const scrollToBottomContainer = (force = false) => {
+    if (chatContainerRef.current) {
+      const container = chatContainerRef.current;
+      
+      // For ScrollArea components, we need to find the actual scrollable viewport
+      const viewport = container.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+      const scrollTarget = viewport || container;
+      
+      const scrollHeight = scrollTarget.scrollHeight;
+      const height = scrollTarget.clientHeight;
+      const maxScrollTop = scrollHeight - height;
+      
+      if (force) {
+        scrollTarget.scrollTop = maxScrollTop;
+      } else {
+        scrollTarget.scrollTo({
+          top: maxScrollTop,
+          behavior: 'smooth'
+        });
+      }
+    }
+  };
 
   // Format phone number as user types
   const formatPhoneNumber = (value: string): string => {
@@ -146,21 +193,267 @@ const MultiAccountTextFree = () => {
   const fetchAccounts = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/accounts`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
       setAccounts(data);
       if (data.length > 0) setSelectedAccount(data[0]);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching accounts:", err);
+
+      // Show user-friendly error message
+      let errorMessage = "Failed to load accounts";
+      if (err.name === "TypeError" && err.message.includes("fetch")) {
+        errorMessage = "Cannot connect to server - check your connection";
+      } else if (err.message.includes("HTTP")) {
+        errorMessage = `Server error: ${err.message}`;
+      }
+
+      showToast(errorMessage, "error");
     }
   };
 
-  // Load conversations when account changes
+  // Load conversations when account changes - ENHANCED
   useEffect(() => {
     if (selectedAccount) {
+      // Load cached conversations first for immediate display
+      const cachedConvos = accountConversations[selectedAccount.id] || [];
+      setConversations(cachedConvos);
+      
+      // Then fetch fresh data
       fetchConversations(selectedAccount.id);
+      
+      // Mark account as read when selected
+      setAccounts(prev => prev.map(acc => 
+        acc.id === selectedAccount.id 
+          ? { ...acc, unreadCount: 0 }
+          : acc
+      ));
     }
   }, [selectedAccount]);
 
+  // Effect to update selected conversation when conversations change - IMPROVED
+  useEffect(() => {
+    if (selectedConversation && selectedConversation.id !== "new") {
+      const updatedConversation = conversations.find(
+        conv => conv.id === selectedConversation.id
+      );
+      
+      if (updatedConversation && 
+          updatedConversation.messages.length !== selectedConversation.messages.length) {
+        // Update selected conversation with new messages
+        setSelectedConversation(updatedConversation);
+        
+        // Auto-scroll to bottom when new messages arrive - multiple methods for reliability
+        setTimeout(() => {
+          scrollToBottom();
+          scrollToBottomContainer();
+        }, 100);
+        
+        // Backup scroll after a longer delay
+        setTimeout(() => {
+          scrollToBottom(true);
+          scrollToBottomContainer(true);
+        }, 300);
+      }
+    }
+  }, [conversations, selectedConversation]);
+
+  // Scroll to bottom whenever selectedConversation changes - ENHANCED
+  useEffect(() => {
+    if (selectedConversation && selectedConversation.messages.length > 0) {
+      // Force immediate scroll when conversation changes
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        scrollToBottom(true);
+        scrollToBottomContainer(true);
+      });
+      
+      setTimeout(() => {
+        scrollToBottom(true);
+        scrollToBottomContainer(true);
+      }, 50);
+      
+      setTimeout(() => {
+        scrollToBottom(true);
+        scrollToBottomContainer(true);
+      }, 150);
+      
+      setTimeout(() => {
+        scrollToBottom(true);
+        scrollToBottomContainer(true);
+      }, 400);
+      
+      // Final backup scroll
+      setTimeout(() => {
+        scrollToBottom(true);
+        scrollToBottomContainer(true);
+      }, 800);
+    }
+  }, [selectedConversation?.id, selectedConversation?.messages?.length]);
+
+  // Auto-polling system - Enhanced to poll all accounts
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      if (!isPolling && accounts.length > 0) {
+        setIsPolling(true);
+        try {
+          // Poll all accounts, but prioritize selected account
+          const accountsToPoll = selectedAccount 
+            ? [selectedAccount, ...accounts.filter(acc => acc.id !== selectedAccount.id)]
+            : accounts;
+
+          for (const account of accountsToPoll) {
+            await fetchConversationsWithChangeDetection(account.id);
+          }
+          setLastPollingTime(new Date());
+        } catch (err) {
+          console.error('Auto-polling error:', err);
+        } finally {
+          setIsPolling(false);
+        }
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [accounts, isPolling, selectedAccount, lastMessageCounts]);
+
+  // Enhanced change detection with per-account tracking - UPDATED TO USE myStatus
+  const fetchConversationsWithChangeDetection = async (accountId: string) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/getConvertion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId: parseInt(accountId) }),
+      });
+
+      if (!res.ok) {
+        console.error("Auto-polling API error:", res.status);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.success && data.data) {
+        const processedConversations = processTextFreeMessages(data.data);
+        const previousConversations = accountConversations[accountId] || [];
+
+        // Track new unread messages by comparing with previous state
+        const newUnreadMessages: Array<{
+          conversationId: string, 
+          conversationNumber: string, 
+          unreadCount: number,
+          lastMessage: string
+        }> = [];
+
+        processedConversations.forEach(conv => {
+          const prevConv = previousConversations.find(p => p.id === conv.id);
+          const prevUnreadCount = prevConv?.unreadCount || 0;
+          
+          // If this conversation has more unread messages than before
+          if (conv.unreadCount > prevUnreadCount) {
+            const newUnreadCount = conv.unreadCount - prevUnreadCount;
+            newUnreadMessages.push({
+              conversationId: conv.id,
+              conversationNumber: conv.number,
+              unreadCount: newUnreadCount,
+              lastMessage: conv.lastMessage
+            });
+          }
+
+          // If this is the currently selected conversation, mark as read
+          if (selectedConversation?.id === conv.id && selectedAccount?.id === accountId) {
+            conv.unreadCount = 0;
+          }
+        });
+
+        // Update account conversations
+        setAccountConversations(prev => ({
+          ...prev,
+          [accountId]: processedConversations
+        }));
+
+        // Update current conversations if this is the selected account
+        if (selectedAccount?.id === accountId) {
+          setConversations(processedConversations);
+        }
+
+        // Update sync time
+        setAccountLastSync(prev => ({
+          ...prev,
+          [accountId]: new Date()
+        }));
+
+        // Show notifications for new unread messages
+        if (newUnreadMessages.length > 0) {
+          const totalNewUnread = newUnreadMessages.reduce((total, msg) => total + msg.unreadCount, 0);
+          const mostRecentActivity = processedConversations.length > 0 
+            ? processedConversations[0].lastActivity 
+            : new Date();
+
+          // Update account unread count
+          const totalAccountUnread = processedConversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0);
+          setAccounts(prev => prev.map(acc => {
+            if (acc.id === accountId) {
+              return {
+                ...acc,
+                unreadCount: selectedAccount?.id === accountId ? 0 : totalAccountUnread,
+                lastActivity: mostRecentActivity
+              };
+            }
+            return acc;
+          }));
+
+          // Show detailed notifications
+          if (selectedAccount?.id !== accountId) {
+            // Not the currently selected account - show account-level notification
+            const account = accounts.find(acc => acc.id === accountId);
+            const accountNumber = account ? account.number : `Account ${accountId}`;
+            
+            if (newUnreadMessages.length === 1) {
+              const msg = newUnreadMessages[0];
+              showToast(
+                `${msg.unreadCount} new message${msg.unreadCount > 1 ? 's' : ''} on ${accountNumber} from ${msg.conversationNumber}: "${msg.lastMessage.substring(0, 50)}${msg.lastMessage.length > 50 ? '...' : ''}"`, 
+                "success"
+              );
+            } else {
+              showToast(
+                `${totalNewUnread} new messages on ${accountNumber} from ${newUnreadMessages.length} contacts`, 
+                "success"
+              );
+            }
+          } else {
+            // Same account but different conversations
+            const otherMessages = newUnreadMessages.filter(msg => msg.conversationId !== selectedConversation?.id);
+            if (otherMessages.length > 0) {
+              const totalOtherUnread = otherMessages.reduce((total, msg) => total + msg.unreadCount, 0);
+              
+              if (otherMessages.length === 1) {
+                const msg = otherMessages[0];
+                showToast(
+                  `${msg.unreadCount} new message${msg.unreadCount > 1 ? 's' : ''} from ${msg.conversationNumber}: "${msg.lastMessage.substring(0, 50)}${msg.lastMessage.length > 50 ? '...' : ''}"`, 
+                  "success"
+                );
+              } else {
+                showToast(
+                  `${totalOtherUnread} new message${totalOtherUnread > 1 ? 's' : ''} from ${otherMessages.length} other conversation${otherMessages.length > 1 ? 's' : ''}`, 
+                  "success"
+                );
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      // Silent error handling for auto-polling
+      console.error(`Auto-polling failed for account ${accountId}:`, err);
+    }
+  };
+
+  // UPDATED fetchConversations to use myStatus
   const fetchConversations = async (accountId: string) => {
     setLoadingConvos(true);
     try {
@@ -177,19 +470,12 @@ const MultiAccountTextFree = () => {
       console.log("Response status:", res.status);
 
       if (!res.ok) {
-        // Clone the response to read it multiple times if needed
-        const responseClone = res.clone();
         let errorText = "";
         try {
           const errorData = await res.json();
           errorText = errorData.error || errorData.message || "Unknown error";
         } catch {
-          // If JSON parsing fails, try reading as text
-          try {
-            errorText = await responseClone.text();
-          } catch {
-            errorText = `HTTP ${res.status} error`;
-          }
+          errorText = `HTTP ${res.status} error`;
         }
         console.error("API response error:", res.status, errorText);
         showToast(`API Error: ${res.status} - ${errorText}`, "error");
@@ -204,6 +490,21 @@ const MultiAccountTextFree = () => {
         const processedConversations = processTextFreeMessages(data.data);
         console.log("Processed conversations:", processedConversations);
         setConversations(processedConversations);
+        
+        // Store in account conversations cache
+        setAccountConversations(prev => ({
+          ...prev,
+          [accountId]: processedConversations
+        }));
+
+        // Update account unread count based on actual unread messages
+        const totalUnread = processedConversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0);
+        setAccounts(prev => prev.map(acc => 
+          acc.id === accountId 
+            ? { ...acc, unreadCount: totalUnread }
+            : acc
+        ));
+        
         showToast(
           `Loaded ${processedConversations.length} conversations`,
           "success",
@@ -237,115 +538,116 @@ const MultiAccountTextFree = () => {
     }
   };
 
-  // Process TextFree API response into conversations
-  // Process TextFree API response into conversations
-const processTextFreeMessages = (apiResponse: any): Conversation[] => {
-  const conversationsMap = new Map<string, Conversation>();
+  const processTextFreeMessages = (apiResponse: any): Conversation[] => {
+    const conversationsMap = new Map<string, Conversation>();
 
-  console.log("Processing API response:", apiResponse);
-  console.log("Type of apiResponse:", typeof apiResponse);
+    console.log("Processing API response:", apiResponse);
+    console.log("Type of apiResponse:", typeof apiResponse);
 
-  // Safety check
-  if (!apiResponse) {
-    console.log("No API response provided");
-    return [];
-  }
-
-  // Parse JSON string if needed
-  let parsedResponse;
-  if (typeof apiResponse === 'string') {
-    try {
-      parsedResponse = JSON.parse(apiResponse);
-      console.log("Parsed JSON string successfully");
-    } catch (err) {
-      console.error("Failed to parse JSON string:", err);
+    // Safety check
+    if (!apiResponse) {
+      console.log("No API response provided");
       return [];
     }
-  } else {
-    parsedResponse = apiResponse;
-  }
 
-  console.log("Parsed response:", parsedResponse);
-
-  // Extract the newCommunications array directly
-  const messages = parsedResponse?.result?.newCommunications;
-  
-  if (!Array.isArray(messages)) {
-    console.log("No newCommunications array found in response");
-    return [];
-  }
-
-  console.log(`Found ${messages.length} messages to process`);
-
-
-
-  messages.forEach((msg: any) => {
-    if (msg.type !== "message") return;
-
-    // Determine the other party's number
-    let otherPartyNumber = "";
-    let displayName = "";
-
-    if (msg.direction === "out") {
-      // Outgoing message - get recipient
-      const recipient = msg.to[0];
-      otherPartyNumber = recipient.TN;
-      displayName = recipient.name || formatPhoneForDisplay(recipient.TN);
+    // Parse JSON string if needed
+    let parsedResponse;
+    if (typeof apiResponse === 'string') {
+      try {
+        parsedResponse = JSON.parse(apiResponse);
+        console.log("Parsed JSON string successfully");
+      } catch (err) {
+        console.error("Failed to parse JSON string:", err);
+        return [];
+      }
     } else {
-      // Incoming message - get sender
-      otherPartyNumber = msg.from.TN;
-      displayName = formatPhoneForDisplay(msg.from.TN);
+      parsedResponse = apiResponse;
     }
 
-    // Create conversation key
-    const conversationKey = otherPartyNumber;
+    console.log("Parsed response:", parsedResponse);
 
-    // Get or create conversation
-    if (!conversationsMap.has(conversationKey)) {
-      conversationsMap.set(conversationKey, {
-        id: `conv_${otherPartyNumber}`,
-        number: displayName,
-        lastMessage: "",
-        messages: [],
-        lastActivity: new Date(),
-        unreadCount: 0,
-      });
+    // Extract the newCommunications array directly
+    const messages = parsedResponse?.result?.newCommunications;
+    
+    if (!Array.isArray(messages)) {
+      console.log("No newCommunications array found in response");
+      return [];
     }
 
-    const conversation = conversationsMap.get(conversationKey)!;
+    console.log(`Found ${messages.length} messages to process`);
 
-    // Add message to conversation
-    const transformedMessage: Message = {
-      id: msg.id,
-      text: msg.text,
-      fromMe: msg.direction === "out",
-      timestamp: new Date(msg.timeCreated),
-    };
+    messages.forEach((msg: any) => {
+      if (msg.type !== "message") return;
 
-    conversation.messages.push(transformedMessage);
-    conversation.lastMessage = msg.text;
-    conversation.lastActivity = new Date(msg.timeCreated);
-  });
+      // Determine the other party's number
+      let otherPartyNumber = "";
+      let displayName = "";
 
-  // Sort messages within each conversation by timestamp
-  conversationsMap.forEach((conversation) => {
-    conversation.messages.sort(
-      (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+      if (msg.direction === "out") {
+        // Outgoing message - get recipient
+        const recipient = msg.to[0];
+        otherPartyNumber = recipient.TN;
+        displayName = recipient.name || formatPhoneForDisplay(recipient.TN);
+      } else {
+        // Incoming message - get sender
+        otherPartyNumber = msg.from.TN;
+        displayName = formatPhoneForDisplay(msg.from.TN);
+      }
+
+      // Create conversation key
+      const conversationKey = otherPartyNumber;
+
+      // Get or create conversation
+      if (!conversationsMap.has(conversationKey)) {
+        conversationsMap.set(conversationKey, {
+          id: `conv_${otherPartyNumber}`,
+          number: displayName,
+          lastMessage: "",
+          messages: [],
+          lastActivity: new Date(),
+          unreadCount: 0,
+        });
+      }
+
+      const conversation = conversationsMap.get(conversationKey)!;
+
+      // Add message to conversation with unread status
+      const transformedMessage: Message = {
+        id: msg.id,
+        text: msg.text,
+        fromMe: msg.direction === "out",
+        timestamp: new Date(msg.timeCreated),
+      };
+
+      conversation.messages.push(transformedMessage);
+      conversation.lastMessage = msg.text;
+      conversation.lastActivity = new Date(msg.timeCreated);
+
+      // Count unread messages using myStatus field
+      if (msg.myStatus === "UNREAD" && msg.direction === "in") {
+        conversation.unreadCount = (conversation.unreadCount || 0) + 1;
+      }
+    });
+
+    // Sort messages within each conversation by timestamp
+    conversationsMap.forEach((conversation) => {
+      conversation.messages.sort(
+        (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+      );
+      // Update last activity to the most recent message
+      if (conversation.messages.length > 0) {
+        const lastMessage =
+          conversation.messages[conversation.messages.length - 1];
+        conversation.lastActivity = lastMessage.timestamp;
+      }
+    });
+
+    // Convert to array and sort by last activity (most recent first)
+    const conversationsArray = Array.from(conversationsMap.values());
+    return conversationsArray.sort(
+      (a, b) => b.lastActivity.getTime() - a.lastActivity.getTime(),
     );
-    // Update last activity to the most recent message
-    if (conversation.messages.length > 0) {
-      const lastMessage =
-        conversation.messages[conversation.messages.length - 1];
-      conversation.lastActivity = lastMessage.timestamp;
-    }
-  });
-
-  // Convert to array and sort by last activity (most recent first)
-  const conversationsArray = Array.from(conversationsMap.values());
-  return conversationsArray.sort(
-    (a, b) => b.lastActivity.getTime() - a.lastActivity.getTime(),
-  );
-};
+  };
 
   // Format phone number for display
   const formatPhoneForDisplay = (phoneNumber: string): string => {
@@ -355,6 +657,57 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
     return phoneNumber;
+  };
+
+  // FIXED markConversationAsRead function
+  const markConversationAsRead = (conversationId: string) => {
+    if (!selectedAccount) return;
+    
+    setConversations(prev =>
+      prev.map(conv =>
+        conv.id === conversationId
+          ? { ...conv, unreadCount: 0 }
+          : conv
+      )
+    );
+
+    // Use consistent key format - FIXED
+    const countKey = `${selectedAccount.id}_${conversationId}`;
+    setLastMessageCounts(prev => {
+      const conversation = conversations.find(c => c.id === conversationId);
+      if (conversation) {
+        return { ...prev, [countKey]: conversation.messages.length };
+      }
+      return prev;
+    });
+  };
+
+  // Improved conversation selection with immediate read marking and scroll
+  const handleConversationSelect = (conv: Conversation) => {
+    setSelectedConversation(conv);
+    markConversationAsRead(conv.id);
+    
+    // Force immediate scroll to bottom when selecting conversation
+    // Multiple attempts with different timings to ensure it works
+    setTimeout(() => {
+      scrollToBottom(true);
+      scrollToBottomContainer(true);
+    }, 10);
+    
+    setTimeout(() => {
+      scrollToBottom(true);
+      scrollToBottomContainer(true);
+    }, 100);
+    
+    setTimeout(() => {
+      scrollToBottom(true);
+      scrollToBottomContainer(true);
+    }, 300);
+    
+    setTimeout(() => {
+      scrollToBottom(true);
+      scrollToBottomContainer(true);
+    }, 500);
   };
 
   const sendMessage = async () => {
@@ -434,6 +787,12 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
             const failMsg = ` Failed to send to ${failed.length} number${failed.length > 1 ? "s" : ""}`;
             showToast(successMsg + failMsg, "warning");
           }
+
+          // Scroll to bottom after sending
+          setTimeout(() => {
+            scrollToBottom(true);
+            scrollToBottomContainer(true);
+          }, 100);
         } else {
           showToast("Failed to send message to any numbers", "error");
         }
@@ -491,12 +850,42 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
           setConversations((prev) =>
             prev.map((conv) =>
               conv.id === selectedConversation.id
-                ? { ...conv, lastMessage: message, lastActivity: new Date() }
+                ? { 
+                    ...conv, 
+                    messages: [...conv.messages, newMessage],
+                    lastMessage: message, 
+                    lastActivity: new Date() 
+                  }
                 : conv,
             ),
           );
 
+          // Update message count for this conversation with consistent key - FIXED
+          setLastMessageCounts(prev => {
+            const countKey = `${selectedAccount.id}_${selectedConversation.id}`;
+            return {
+              ...prev,
+              [countKey]: (prev[countKey] || 0) + 1
+            };
+          });
+
           setMessage("");
+
+          // Auto-scroll to bottom after sending - multiple attempts for reliability
+          setTimeout(() => {
+            scrollToBottom();
+            scrollToBottomContainer();
+          }, 50);
+          
+          setTimeout(() => {
+            scrollToBottom(true);
+            scrollToBottomContainer(true);
+          }, 150);
+          
+          setTimeout(() => {
+            scrollToBottom(true);
+            scrollToBottomContainer(true);
+          }, 300);
         } else {
           showToast(`Error: ${data.error}`, "error");
         }
@@ -520,7 +909,7 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
   };
 
   const filteredConversations = conversations.filter((conv) =>
-    conv.number.includes(searchQuery),
+    conv.number.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -529,11 +918,19 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
       <div className="w-80 bg-white border-r border-slate-200 flex flex-col">
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center relative">
               <MessageCircle className="w-5 h-5 text-white" />
+              {(() => {
+                const totalUnread = accounts.reduce((total, acc) => total + (acc.unreadCount || 0), 0);
+                return totalUnread > 0 ? (
+                  <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                    {totalUnread > 99 ? '99+' : totalUnread}
+                  </div>
+                ) : null;
+              })()}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">TextFree Pro</h1>
+              <h1 className="text-xl font-bold text-slate-900">T Chat</h1>
               <p className="text-sm text-slate-500">Multi-Account Messaging</p>
             </div>
           </div>
@@ -550,7 +947,7 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
                   setSelectedConversation(null);
                 }}
                 className={cn(
-                  "w-full text-left p-4 rounded-xl transition-all duration-200 group",
+                  "w-full text-left p-4 rounded-xl transition-all duration-200 group relative",
                   selectedAccount?.id === acc.id
                     ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg"
                     : "hover:bg-slate-50 text-slate-700",
@@ -562,13 +959,28 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
                       <Phone className="w-4 h-4" />
                       <span className="font-medium">{acc.number}</span>
                     </div>
-                  </div>
-                  <div
-                    className={cn(
-                      "w-3 h-3 rounded-full",
-                      acc.isActive ? "bg-green-400" : "bg-slate-300",
+                    {acc.lastActivity && (
+                      <p className="text-xs mt-1 opacity-75">
+                        Last activity: {formatTime(acc.lastActivity)}
+                      </p>
                     )}
-                  />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(acc.unreadCount || 0) > 0 && (
+                      <Badge
+                        variant="default"
+                        className="bg-red-500 text-white text-xs px-2 py-0.5 animate-pulse"
+                      >
+                        {acc.unreadCount > 99 ? '99+' : acc.unreadCount}
+                      </Badge>
+                    )}
+                    <div
+                      className={cn(
+                        "w-3 h-3 rounded-full",
+                        acc.isActive ? "bg-green-400" : "bg-slate-300",
+                      )}
+                    />
+                  </div>
                 </div>
               </button>
             ))}
@@ -590,9 +1002,16 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
       <div className="w-96 bg-white border-r border-slate-200 flex flex-col">
         <div className="p-6 border-b border-slate-100">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">
-              Conversations
-            </h2>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 mb-1">
+                Conversations
+              </h2>
+              {lastPollingTime && (
+                <p className="text-xs text-slate-500">
+                  Last updated: {lastPollingTime.toLocaleTimeString()}
+                </p>
+              )}
+            </div>
             <div className="flex gap-2">
               <Button
                 onClick={() =>
@@ -648,11 +1067,13 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
               {filteredConversations.map((conv) => (
                 <button
                   key={conv.id}
-                  onClick={() => setSelectedConversation(conv)}
+                  onClick={() => handleConversationSelect(conv)}
                   className={cn(
                     "w-full text-left p-4 rounded-lg transition-all duration-200 border mb-2",
                     selectedConversation?.id === conv.id
                       ? "bg-blue-50 border-blue-200"
+                      : (conv.unreadCount || 0) > 0
+                      ? "bg-red-50 border-red-200 hover:bg-red-100"
                       : "hover:bg-slate-50 border-transparent",
                   )}
                 >
@@ -669,10 +1090,10 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
                           {conv.number}
                         </h3>
                         <div className="flex items-center gap-2">
-                          {conv.unreadCount! > 0 && (
+                          {(conv.unreadCount || 0) > 0 && (
                             <Badge
                               variant="default"
-                              className="bg-blue-500 text-xs px-2 py-0.5"
+                              className="bg-red-500 text-xs px-2 py-0.5 animate-pulse"
                             >
                               {conv.unreadCount}
                             </Badge>
@@ -693,8 +1114,6 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
             </div>
           )}
         </ScrollArea>
-
-        {/* Floating New Message Button */}
       </div>
 
       {/* Right - Chat Window */}
@@ -856,7 +1275,7 @@ const processTextFreeMessages = (apiResponse: any): Conversation[] => {
             </div>
 
             {/* Chat Messages */}
-            <ScrollArea className="flex-1 p-6">
+            <ScrollArea ref={chatContainerRef} className="flex-1 p-6">
               <div className="space-y-4">
                 {selectedConversation.messages?.map((msg) => (
                   <div
